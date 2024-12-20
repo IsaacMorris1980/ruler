@@ -11,6 +11,7 @@
 		Duplicate,
 		Reset,
 		Save,
+		Zoom,
 		About,
 		Exit,
 		RulerInfo,

@@ -102,6 +102,7 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="PresentationFramework" />
     <Reference Include="System">
       <Name>System</Name>
     </Reference>
@@ -131,6 +132,12 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="SetZoomLevelForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SetZoomLevelForm.Designer.cs">
+      <DependentUpon>SetZoomLevelForm.cs</DependentUpon>
+    </Compile>
     <Content Include="app.ico" />
     <Compile Include="AssemblyInfo.cs">
       <SubType>Code</SubType>
@@ -144,6 +151,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="SetSizeForm.resx">
       <DependentUpon>SetSizeForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SetZoomLevelForm.resx">
+      <DependentUpon>SetZoomLevelForm.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

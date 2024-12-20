@@ -36,6 +36,9 @@ namespace Ruler
         private Point displayLocation;
         private SaveTypes saveType;
         private readonly RulerInfo initRulerInfo;
+        private string opacity;
+        private int zoomLevel=100;
+        private int dpiLevel;
 
         private bool doLockRulerResizeOnMove;
         private int staticMarkerDelta;
@@ -138,20 +141,20 @@ namespace Ruler
             this.isMouseResizeCommand = false;
             this.resizeRegion = ResizeRegion.None;
             this.resizeBorderWidth = 5;
+            this.SaveType = rulerInfo.SaveType;
             if (!isWindowVisible(this.Bounds))
             {
                 this.Location = (Screen.PrimaryScreen).Bounds.Location;
             }
-
-
-
-
-            // Form setup ------------------
+            Debug.WriteLine(GetWindowsScaling());
+            Debug.WriteLine(this.SaveType.ToString());
+           // Form setup ------------------
             this.SetStyle(ControlStyles.ResizeRedraw, true);
             this.UpdateStyles();
             ResourceManager resources = new ResourceManager(typeof(MainForm));
             this.Icon = (Icon)resources.GetObject("$this.Icon");
             this.Opacity = rulerInfo.Opacity;
+            opacity = (this.Opacity * 100).ToString() +"%";
             this.FormBorderStyle = FormBorderStyle.None;
             this.Font = new Font("Tahoma", 10);
             this.Text = "Ruler";
@@ -166,7 +169,10 @@ namespace Ruler
 
             this.SetStyle(ControlStyles.DoubleBuffer | ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint, true);
         }
-
+        public static int GetWindowsScaling()
+        {
+            return (int)(100 * Screen.PrimaryScreen.Bounds.Width / System.Windows.SystemParameters.PrimaryScreenWidth);
+        }
         private void CreateMenuItems(RulerInfo rulerInfo)
         {
             this.ContextMenu = new ContextMenu();
@@ -176,7 +182,7 @@ namespace Ruler
                 new MenuItemHolder(MenuItemEnum.TopMost, "Stay On Top", this.TopMostHandler, rulerInfo.TopMost),
                 new MenuItemHolder(MenuItemEnum.Vertical, "Vertical", this.VerticalHandler, rulerInfo.IsVertical),
                 new MenuItemHolder(MenuItemEnum.ShowToolTip, "Tool Tip", this.ShowToolTipHandler, rulerInfo.ShowToolTip),
-                new MenuItemHolder(MenuItemEnum.Opacity, "Opacity", null, false),
+                new MenuItemHolder(MenuItemEnum.Opacity, "Opacity: "+this.opacity, null, false),
                 new MenuItemHolder(MenuItemEnum.LockResize, "Lock Resizing", this.LockResizeHandler, rulerInfo.IsLocked),
                 new MenuItemHolder(MenuItemEnum.SetSize, "Set size...", this.SetSizeHandler, false),
                 new MenuItemHolder(MenuItemEnum.Duplicate, "Duplicate", this.DuplicateHandler, false),
@@ -190,7 +196,9 @@ namespace Ruler
 				new MenuItemHolder(MenuItemEnum.RulerInfo, "Copy RulerInfo", this.CopyRulerInfo, false),
                 MenuItemHolder.Separator,
 #endif
-                new MenuItemHolder(MenuItemEnum.Save,"Save Settings?",this.SaveHandler,false),
+                new MenuItemHolder(MenuItemEnum.Save,"Saved? " + this.FirstLetterToUpper(this.SaveType.ToString()),this.SaveHandler,false),
+                new MenuItemHolder(MenuItemEnum.Zoom,"Zoom",this.ZoomHandler,false),
+                MenuItemHolder.Separator,
                 new MenuItemHolder(MenuItemEnum.Exit, "Exit", this.ExitHandler, false)
             };
 
@@ -302,12 +310,46 @@ namespace Ruler
                 this.saveType = value;
             }
         }
+        public int ZoomLevel
+        {
+            get
+            {
+                return this.zoomLevel;
+
+            }
+           set
+            {
+                this.zoomLevel = value;
+                this.Refresh();
+            }
+        }
+        public int DPILevel
+        {
+            get
+            {
+                return this.dpiLevel;
+            }
+            set
+            {
+                this.dpiLevel = value;
+            }
+        }
+
 
 
         #endregion Properties
 
         #region Helpers
+        public string FirstLetterToUpper(string str)
+        {
+            if (str == null)
+                return null;
 
+            if (str.Length > 1)
+                return char.ToUpper(str[0]) + str.Substring(1);
+
+            return str.ToUpper();
+        }
         private RulerInfo GetRulerInfo()
         {
             RulerInfo rulerInfo = new RulerInfo();
@@ -341,7 +383,8 @@ namespace Ruler
 
         private void SetToolTip()
         {
-            this.toolTip.SetToolTip(this, string.Format("Width: {0} pixels\nHeight: {1} pixels", this.Width, this.Height));
+            string opacity = (this.Opacity * 100).ToString() + "%";
+            this.toolTip.SetToolTip(this, string.Format("Width: {0} pixels\nHeight: {1} pixels\nOpacity: {2}\nSaved?: {3}", this.Width, this.Height,opacity,this.FirstLetterToUpper(this.SaveType.ToString())));
         }
 
         private void RemoveToolTip()
@@ -407,7 +450,7 @@ namespace Ruler
         private void OpacityMenuHandler(object sender, EventArgs e)
         {
             MenuItem opacityMenuItem = (MenuItem)sender;
-
+            MenuItem opacityMenuItemParent =(MenuItem) opacityMenuItem.Parent;
             foreach (MenuItem menuItem in opacityMenuItem.Parent.MenuItems)
             {
                 menuItem.Checked = false;
@@ -415,6 +458,9 @@ namespace Ruler
 
             opacityMenuItem.Checked = true;
             this.Opacity = double.Parse(opacityMenuItem.Text.Replace("%", string.Empty)) / 100;
+            this.opacity = opacityMenuItem.Text;
+            opacityMenuItemParent.Text = "Opacity: " + this.opacity;
+            this.SetToolTip();
         }
 
         private void ShowToolTipHandler(object sender, EventArgs e)
@@ -494,26 +540,52 @@ namespace Ruler
 
             saveMenuItem.Checked = true;
             string selected = saveMenuItem.Text;
+            MenuItem mi = (MenuItem)saveMenuItem.Parent;
             switch (selected)
             {
                 case "Do not save":
                     this.SaveType = SaveTypes.none;
+                    this.SetToolTip();
+                    mi.Text = "Saved? " + this.FirstLetterToUpper(this.SaveType.ToString());
                     break;
                 case "Save Location":
                     this.SaveType = SaveTypes.location;
+                    this.SetToolTip();
+                    mi.Text = "Saved? " + this.FirstLetterToUpper(this.SaveType.ToString());
                     break;
                 case "Save Size":
                     this.SaveType = SaveTypes.size;
+                    this.SetToolTip();
+                    mi.Text = "Saved? " + this.FirstLetterToUpper(this.SaveType.ToString());
                     break;
                 case "Save complete ruler":
                     this.SaveType = SaveTypes.all;
+                    this.SetToolTip();
+                    mi.Text = "Saved? " + this.FirstLetterToUpper(this.SaveType.ToString());
                     break;
                 default:
                     this.SaveType = SaveTypes.none;
+                    this.SetToolTip();
+                    mi.Text = "Saved? " + this.FirstLetterToUpper(this.SaveType.ToString());
                     break;
             }
+           
 
+        }
 
+        public void ZoomHandler(object sender,EventArgs e)
+        {
+            using (SetZoomLevelForm setZoom=new SetZoomLevelForm(1))
+            {
+                if (this.TopMost)
+                {
+                    setZoom.TopMost = true;
+                }
+                if (setZoom.ShowDialog()==DialogResult.OK)
+                {
+                    this.ZoomLevel = setZoom.GetZoomSize();
+                }
+            }
         }
 
 
