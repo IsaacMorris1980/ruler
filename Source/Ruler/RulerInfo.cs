@@ -67,11 +67,16 @@ namespace Ruler
             get;
             set;
         }
+        public float ScaleFactor
+        {
+            get;
+            set;
+        }
 
 
         public string ConvertToParameters()
         {
-            return string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8}", this.Width, this.Height, this.IsVertical, this.Opacity, this.ShowToolTip, this.IsLocked, this.TopMost, this.DisplayedLocation, this.SaveType);
+            return string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}", this.Width, this.Height, this.IsVertical, this.Opacity, this.ShowToolTip, this.IsLocked, this.TopMost, this.DisplayedLocation, this.SaveType,this.ScaleFactor);
         }
 
         public static RulerInfo CovertToRulerInfo(string[] args)
@@ -85,6 +90,8 @@ namespace Ruler
             string topMost = args[6];
             string location = (args.Length >= 8) ? args[7] : "0,0";
             string savetype = (args.Length >= 9) ? args[8] : "none";
+            string scaleFactor = (args.Length >= 10) ? args[9] : "1";
+
 
             SaveTypes saveArgs;
             string[] startlocation = location.Split(',');
@@ -104,7 +111,8 @@ namespace Ruler
                 IsLocked = bool.Parse(isLocked),
                 TopMost = bool.Parse(topMost),
                 DisplayedLocation = pt,
-                SaveType = saveArgs
+                SaveType = saveArgs,
+                ScaleFactor = float.Parse(scaleFactor)
             };
 
             return rulerInfo;
@@ -122,7 +130,8 @@ namespace Ruler
                 IsVertical = false,
                 TopMost = true,
                 DisplayedLocation = new Point(0, 0),
-                SaveType = SaveTypes.none
+                SaveType = SaveTypes.none,
+                ScaleFactor = 1f
             };
 
             return rulerInfo;
@@ -139,6 +148,7 @@ namespace Ruler
             targetInstance.TopMost = source.TopMost;
             targetInstance.DisplayedLocation = source.DisplayedLocation;
             targetInstance.SaveType = source.SaveType;
+            targetInstance.ScaleFactor = source.ScaleFactor;
         }
         public static void SaveLocaton(MainForm form)
         {
@@ -172,6 +182,7 @@ namespace Ruler
             Settings.Default["top"] = form.TopMost;
             Settings.Default["tip"] = form.ShowToolTip;
             Settings.Default["savetype"] = form.SaveType.ToString();
+            Settings.Default["scalefactor"] = form.ScaleFactor;
             Settings.Default.Save();
             Settings.Default.Reload();
 
@@ -227,6 +238,7 @@ namespace Ruler
             ri.ShowToolTip = (Settings.Default["tip"] == null) ? true : (bool)Settings.Default["tip"];
             SaveTypes saveTypes;
             string saved = Settings.Default["savetype"] == null ? "none" : (string)Settings.Default["savetype"];
+            ri.ScaleFactor = (Settings.Default["scalefactor"] == null) ? ri.ScaleFactor : (float)Settings.Default["scalefactor"];
             if (!Enum.TryParse<SaveTypes>(saved, true, out saveTypes))
             {
                 saveTypes = SaveTypes.none;

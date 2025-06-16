@@ -55,6 +55,11 @@ namespace Ruler
             get;
             set;
         }
+        float ScaleFactor
+        {
+            get;
+            set;
+        }
 
     }
 }
