@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Security.Permissions;
 
 namespace Ruler
 {
@@ -54,12 +55,16 @@ namespace Ruler
         {
             get;
             set;
-        }
-        float ScaleFactor
+        }        
+        float CurrentScale
         {
             get;
             set;
         }
-
+        float PreviousScale
+        {
+            get;
+            set;
+        }   
     }
 }

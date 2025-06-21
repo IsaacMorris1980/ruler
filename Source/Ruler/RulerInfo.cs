@@ -72,13 +72,25 @@ namespace Ruler
             get;
             set;
         }
-
-
+        public bool Scaled
+        {
+            get;
+            set;
+        }
+        public float CurrentScale
+        {
+            get;
+            set;
+        }
+        public float PreviousScale
+        {
+            get;
+            set;
+        }
         public string ConvertToParameters()
         {
-            return string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}", this.Width, this.Height, this.IsVertical, this.Opacity, this.ShowToolTip, this.IsLocked, this.TopMost, this.DisplayedLocation, this.SaveType,this.ScaleFactor);
+            return string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8}", this.Width, this.Height, this.IsVertical, this.Opacity, this.ShowToolTip, this.IsLocked, this.TopMost, this.DisplayedLocation, this.SaveType);
         }
-
         public static RulerInfo CovertToRulerInfo(string[] args)
         {
             string width = args[0];
@@ -90,9 +102,6 @@ namespace Ruler
             string topMost = args[6];
             string location = (args.Length >= 8) ? args[7] : "0,0";
             string savetype = (args.Length >= 9) ? args[8] : "none";
-            string scaleFactor = (args.Length >= 10) ? args[9] : "1";
-
-
             SaveTypes saveArgs;
             string[] startlocation = location.Split(',');
             Point pt = new Point(int.Parse(startlocation[0]), int.Parse(startlocation[1]));
@@ -111,13 +120,12 @@ namespace Ruler
                 IsLocked = bool.Parse(isLocked),
                 TopMost = bool.Parse(topMost),
                 DisplayedLocation = pt,
-                SaveType = saveArgs,
-                ScaleFactor = float.Parse(scaleFactor)
+                SaveType = saveArgs
             };
+           
 
             return rulerInfo;
         }
-
         public static RulerInfo GetDefaultRulerInfo()
         {
             RulerInfo rulerInfo = new RulerInfo
@@ -131,12 +139,11 @@ namespace Ruler
                 TopMost = true,
                 DisplayedLocation = new Point(0, 0),
                 SaveType = SaveTypes.none,
-                ScaleFactor = 1f
+                CurrentScale = 100,
+                PreviousScale =100
             };
-
             return rulerInfo;
         }
-
         public static void CopyInto(IRulerInfo source, IRulerInfo targetInstance)
         {
             targetInstance.Width = source.Width;
@@ -147,8 +154,10 @@ namespace Ruler
             targetInstance.IsLocked = source.IsLocked;
             targetInstance.TopMost = source.TopMost;
             targetInstance.DisplayedLocation = source.DisplayedLocation;
-            targetInstance.SaveType = source.SaveType;
-            targetInstance.ScaleFactor = source.ScaleFactor;
+            targetInstance.SaveType = source.SaveType;           
+            targetInstance.CurrentScale = source.CurrentScale;
+            targetInstance.PreviousScale = source.PreviousScale;
+
         }
         public static void SaveLocaton(MainForm form)
         {
@@ -164,6 +173,8 @@ namespace Ruler
             Settings.Default.Reset();
             Settings.Default["width"] = form.Width;
             Settings.Default["height"] = form.Height;
+            Settings.Default["currentscale"] = form.CurrentScale;
+            Settings.Default["previousscale"] = form.PreviousScale;
             Settings.Default["savetype"] = form.SaveType.ToString();
             Settings.Default.Save();
             Settings.Default.Reload();
@@ -181,11 +192,11 @@ namespace Ruler
             Settings.Default["locked"] = form.IsLocked;
             Settings.Default["top"] = form.TopMost;
             Settings.Default["tip"] = form.ShowToolTip;
-            Settings.Default["savetype"] = form.SaveType.ToString();
-            Settings.Default["scalefactor"] = form.ScaleFactor;
+            Settings.Default["currentscale"] = form.CurrentScale;
+            Settings.Default["previousscale"] = form.PreviousScale;
+            Settings.Default["savetype"] = form.SaveType.ToString();           
             Settings.Default.Save();
             Settings.Default.Reload();
-
         }
         public static SaveTypes CheckSavedState()
         {
@@ -216,12 +227,13 @@ namespace Ruler
             RulerInfo ri = RulerInfo.GetDefaultRulerInfo();
             ri.Width = (Settings.Default["width"] == null) ? ri.Width : (int)Settings.Default["width"];
             ri.Height = (Settings.Default["height"] == null) ? ri.Height : (int)Settings.Default["height"];
+            ri.PreviousScale = (Settings.Default["previousscale"] == null) ? 100 : (float)Settings.Default["previousscale"];          
             SaveTypes saveTypes;
             string saved = Settings.Default["savetype"] == null ? "none" : (string)Settings.Default["savetype"];
             if (!Enum.TryParse<SaveTypes>(saved, true, out saveTypes))
             {
                 saveTypes = SaveTypes.none;
-            }
+            }         
             ri.SaveType = saveTypes;
             return ri;
         }
@@ -236,13 +248,13 @@ namespace Ruler
             ri.IsLocked = (Settings.Default["locked"] == null) ? false : (bool)Settings.Default["locked"];
             ri.TopMost = (Settings.Default["top"] == null) ? true : (bool)Settings.Default["top"];
             ri.ShowToolTip = (Settings.Default["tip"] == null) ? true : (bool)Settings.Default["tip"];
+            ri.PreviousScale = (Settings.Default["previousscale"] == null) ? ri.PreviousScale : 100;
             SaveTypes saveTypes;
             string saved = Settings.Default["savetype"] == null ? "none" : (string)Settings.Default["savetype"];
-            ri.ScaleFactor = (Settings.Default["scalefactor"] == null) ? ri.ScaleFactor : (float)Settings.Default["scalefactor"];
-            if (!Enum.TryParse<SaveTypes>(saved, true, out saveTypes))
+             if (!Enum.TryParse<SaveTypes>(saved, true, out saveTypes))
             {
                 saveTypes = SaveTypes.none;
-            }
+            }           
             ri.SaveType = saveTypes;
             return ri;
 
@@ -265,8 +277,6 @@ namespace Ruler
             }
             return Screen.PrimaryScreen;
         }
-
-
     }
     public enum SaveTypes
     {
