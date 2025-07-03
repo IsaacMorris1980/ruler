@@ -125,6 +125,7 @@ namespace Ruler
 
             this.Init(this.initRulerInfo);
             this.CurrentScale = 100 * ((float)(this.DeviceDpi / 96.0));
+            this.Font = new Font("Tahoma", 10 * this.ScaleFactor, GraphicsUnit.Pixel);
             this.Scale(new SizeF(this.ScaleFactor, this.ScaleFactor));
         }
 
@@ -158,7 +159,7 @@ namespace Ruler
             this.Icon = (Icon)resources.GetObject("$this.Icon");
             this.Opacity = rulerInfo.Opacity;
             this.FormBorderStyle = FormBorderStyle.None;
-            this.Font = new Font("Tahoma", 10);
+            this.Font = new Font("Tahoma", 10,GraphicsUnit.Pixel);
             this.Text = "Ruler";
             this.BackColor = Color.White;
             this.TopMost = rulerInfo.TopMost;
@@ -390,6 +391,7 @@ namespace Ruler
                 Debug.WriteLine(newDpi);
                 Debug.WriteLine(newDpi / 96);
                 this.CurrentScale =100*((float) (newDpi / 96.0));
+                this.Font = new Font("Tahoma", 10*this.ScaleFactor, GraphicsUnit.Pixel);
                 this.Scale(new SizeF(this.ScaleFactor, this.ScaleFactor));
           }
             this.PreviousScale = this.CurrentScale;

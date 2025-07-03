@@ -164,6 +164,7 @@ namespace Ruler
         //    Settings.Default.Reset();
             Settings.Default["location"] = form.Location;
             Settings.Default["savetype"] = form.SaveType.ToString();
+            Settings.Default["previousscale"] =form.PreviousScale;
             Settings.Default.Save();
             Settings.Default.Reload();
 
@@ -172,8 +173,7 @@ namespace Ruler
         {
             Settings.Default.Reset();
             Settings.Default["width"] = form.Width;
-            Settings.Default["height"] = form.Height;
-            Settings.Default["currentscale"] = form.CurrentScale;
+            Settings.Default["height"] = form.Height;           
             Settings.Default["previousscale"] = form.PreviousScale;
             Settings.Default["savetype"] = form.SaveType.ToString();
             Settings.Default.Save();
@@ -191,8 +191,7 @@ namespace Ruler
             Settings.Default["vertical"] = form.IsVertical;
             Settings.Default["locked"] = form.IsLocked;
             Settings.Default["top"] = form.TopMost;
-            Settings.Default["tip"] = form.ShowToolTip;
-            Settings.Default["currentscale"] = form.CurrentScale;
+            Settings.Default["tip"] = form.ShowToolTip;           
             Settings.Default["previousscale"] = form.PreviousScale;
             Settings.Default["savetype"] = form.SaveType.ToString();           
             Settings.Default.Save();
@@ -220,6 +219,7 @@ namespace Ruler
                 saveTypes = SaveTypes.none;
             }
             ri.SaveType = saveTypes;
+            ri.PreviousScale = (Settings.Default["previousscale"] == null) ? 100 : (float)Settings.Default["previousscale"];
             return ri;
         }
         public static RulerInfo GetSavedSize()
@@ -257,7 +257,6 @@ namespace Ruler
             }           
             ri.SaveType = saveTypes;
             return ri;
-
         }
         public static Screen GetScreen(string devicename)
         {
