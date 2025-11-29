@@ -65,6 +65,7 @@ namespace Ruler.Wpf
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             var dialogService = ServiceProvider.GetRequiredService<IDialogService>();
             var persistenceService = ServiceProvider.GetRequiredService<SingleRulerPersistenceService>();
+            persistenceService.ResetRulerState();
             RulerInfo initialInfo = persistenceService.LoadRulerState();
             dialogService.AddRuler(mainWindow);            
             mainWindow.Show();

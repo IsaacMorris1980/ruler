@@ -1,14 +1,18 @@
 ﻿using Ruler.Wpf.Common;
+using Ruler.Wpf.Enums;
+
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
 namespace Ruler.Wpf.Models
 {
-    public class RulerInfo:IRulerInfo
+    public class RulerInfo:IRulerInfo, INotifyPropertyChanged
     {
         public double Width
         {
@@ -97,7 +101,62 @@ namespace Ruler.Wpf.Models
             get;
             set; 
         }
+        public double ScaleFactor
+        {
+            get;
+            set;
+        }=1.0;
+        public bool IsAutoScaled 
+        { 
+            get;
+            set;
+        }=false;
+        private RulerScale _selectedScale;
 
+        public RulerScale SelectedScale
+        {
+            get => _selectedScale;
+            set
+            {
+                if (_selectedScale != value)
+                {
+                    _selectedScale = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        private MeasurementUnit _currentUnit;
+        private double _zoomFactor = 1.0;
+        public MeasurementUnit CurrentUnit
+        {
+            get
+            {
+                return _currentUnit;
+            }
+            set
+            {
+                if (_currentUnit != value)
+                {
+                    _currentUnit = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        public double ZoomFactor
+        {
+            get
+            {
+                return _zoomFactor;
+            }
+            set
+            {
+                if (_zoomFactor != value)
+                {
+                    _zoomFactor = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
         public static RulerInfo GetDefaultRulerInfo()
         {
             RulerInfo rulerInfo = new RulerInfo
@@ -111,7 +170,9 @@ namespace Ruler.Wpf.Models
                 TopMost = true,
                 LocationX = 0,
                 LocationY = 0,
-                SaveType = SaveTypes.none
+                SaveType = SaveTypes.none,
+                ScaleFactor = 1.0,
+                IsAutoScaled = false
             };
 
             return rulerInfo;
@@ -129,7 +190,15 @@ namespace Ruler.Wpf.Models
             targetInstance.LocationX = source.LocationX;
             targetInstance.LocationY = source.LocationY;
             targetInstance.SaveType = source.SaveType;
+            targetInstance.ScaleFactor = source.ScaleFactor;
+            targetInstance.IsAutoScaled = source.IsAutoScaled;
         }
-   
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
     }
 }

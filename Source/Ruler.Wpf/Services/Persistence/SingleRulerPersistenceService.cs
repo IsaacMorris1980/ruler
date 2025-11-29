@@ -50,5 +50,10 @@ namespace Ruler.Wpf.Services.Persistence
             // Fallback or throw an error if the required strategy isn't found
             throw new InvalidOperationException("Default persistence strategy not found.");
         }
+        public void ResetRulerState()
+        {
+            RulerInfo defaultInfo = RulerInfo.GetDefaultRulerInfo();
+            SaveRulerState(defaultInfo);
+        }
     }
 }

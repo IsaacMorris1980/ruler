@@ -1,25 +1,12 @@
-﻿using Ruler.Wpf.Common;
-using Ruler.Wpf.Models;
+﻿using Ruler.Wpf.Models;
 using Ruler.Wpf.Services;
 using Ruler.Wpf.ViewModels;
-
+using Ruler.Wpf.Common;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Ruler.Wpf
 {
@@ -29,50 +16,20 @@ namespace Ruler.Wpf
     public partial class MainWindow : Window
     {
 
-        // --- Win32 Interop Definitions ---
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
-
-        // This is exactly where you declare the external function:
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-        // --- Win32 Interop Definitions for MonitorFromRect ---
-        [DllImport("user32.dll")]
-        private static extern IntPtr MonitorFromRect(ref RECT lprc, uint dwFlags);
-
+       
+       
         private RulerViewModel _viewModel;
         private bool _isSizeChangingProgrammatically = false;
         private bool _isMoving = false;
         private bool _isResizing = false;
         private const double EDGE_TOLERANCE = 5.0;
-        private const int WM_NCHITTEST = 0x0084;
-        private const int HTCLIENT = 0x0001;
-        private const int HTNOWHERE = 0x0000;
-        // Resize HitTest codes (You MUST use these original codes for detection)
-        private const int HTTOPLEFT = 13;
-        private const int HTTOPRIGHT = 14;
-        private const int HTBOTTOMLEFT = 16;
-        private const int HTBOTTOMRIGHT = 17;
-        private const int HTLEFT = 10;
-        private const int HTRIGHT = 11;
-        private const int HTTOP = 12;
-        private const int HTBOTTOM = 15;
+       
         private const int SYSTEM_WINDOW_BORDER_SIZE = 8;
         private const double WINDOW_NON_CLIENT_OFFSET_DIP = 8.0;
         private Point _mouseDownPosition;
         private Point _mouseUpPosition;
 
-        // Win32 Message Constants
-        private const int HTCAPTION = 0x0002;            // Hit Test Caption (allows dragging)
-        private const int WM_WINDOWPOSCHANGED = 0x0047;  // Sent after the size/position is changed
-        private const int WM_MOVE = 0x0003;
+        
         private ILoggingService _loggingService;    
         // Points used for calculating delta movements.
         private Point _startPoint;
@@ -80,6 +37,9 @@ namespace Ruler.Wpf
         private ResizeRegion resizeRegion = ResizeRegion.None;
         // Flag to track if a drag operation has started
         private bool _isDragging = false;
+             private const int DpiValue = 96; // Standard DPI
+        private const int MDT_EFFECTIVE_DPI = 0;
+        private double _currentDpiScaleFactor = 1.0;
 
         public MainWindow(RulerViewModel viewModel, ILoggingService loggingService)
         {
@@ -87,9 +47,10 @@ namespace Ruler.Wpf
             this.Loaded += MainWindow_Loaded;
             this.SourceInitialized += MainWindow_SourceInitialized;
             this.DataContext = viewModel;
+            _viewModel = viewModel; 
             _loggingService = loggingService;
             this.Loaded += MainWindow_Loaded;
-            RECT rulerarea = GetWindowRectFromWpf();
+           NativeMethods.RECT rulerarea = GetWindowRectFromWpf();
             bool isVisible = IsWindowVisible(rulerarea);
             if (!isVisible)
             {
@@ -98,27 +59,28 @@ namespace Ruler.Wpf
                 _viewModel.LocationX = 0;
                 _viewModel.LocationY = 0;
             }
+            _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
-        //private void ApplyDpiAwareMarginFix()
-        //{
-        //    PresentationSource source = PresentationSource.FromVisual(this);
+        private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            // When AutoScale is enabled via the menu, calculate and apply the system scale factor.
+            if (e.PropertyName == nameof(RulerViewModel.IsAutoScaled) && _viewModel.IsAutoScaled)
+            {
+                ApplySystemDpiScale();
+            }
+        }
+        private void ApplySystemDpiScale()
+        {
+            // Use PresentationSource to reliably get DPI scaling in WPF
+            if (PresentationSource.FromVisual(this) is HwndSource source)
+            {
+                // M11 is the X-axis scaling factor (e.g., 1.25 for 125%)
+                double dpiScaleFactor = source.CompositionTarget.TransformToDevice.M11;
 
-        //    if (source?.CompositionTarget != null)
-        //    {
-        //        // Get the scale factor for diagnostic logging only
-        //        Matrix matrix = source.CompositionTarget.TransformToDevice;
-        //        double scaleFactor = matrix.M22;
-
-        //        // CRITICAL FIX: The margin must be a constant -8 DIPs (WPF units), 
-        //        // regardless of the DPI scale factor, because WPF handles the scaling internally.
-        //        double dynamicMargin = -WINDOW_NON_CLIENT_OFFSET_DIP;
-
-        //        // Apply the calculated margin to the ItemsControls               
-        //        this.RightRuler.Margin = new Thickness(0, dynamicMargin, 0, 0);
-
-        //        Console.WriteLine($"DPI Scale Factor: {scaleFactor}. Applied Top Margin Fix: {dynamicMargin} DIPs");
-        //    }
-        //}
+                // Push the system DPI scale to the ViewModel
+                _viewModel.SetAutoScaleFactor(dpiScaleFactor);
+            }
+        }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
@@ -133,11 +95,12 @@ namespace Ruler.Wpf
                     // Set the initialization flag
 
                     _viewModel = this.DataContext as RulerViewModel;
+                    Console.WriteLine($"Width: {this.Width}, Height: {this.Height}");
+                    Console.WriteLine($"RulerViewModel Width: {viewModel.Width}, Height: {viewModel.Height}");
                     _loggingService.LogInfo("MainWindow loaded. Initializing size and position.");
                     // Use the ViewModel's stored DIU values directly.
                     // WPF handles the DPI scaling automatically.
-                    this.Width = viewModel.Width;
-                    this.Height = viewModel.Height;
+                  
                     this.Left = viewModel.LocationX;
                     this.Top = viewModel.LocationY;
      
@@ -152,10 +115,10 @@ namespace Ruler.Wpf
             {
                 var a = ex.Message;
             }
-   
+            _isFullyLoaded = true;
+
         }
-        private const int WM_RBUTTONDOWN = 0x0204;
-        private const int WM_CONTEXTMENU = 0x007B;
+      
         private void MainWindow_SourceInitialized(object sender, EventArgs e)
         {
             // Get the window handle and set up the message loop override
@@ -163,13 +126,14 @@ namespace Ruler.Wpf
             HwndSource source = HwndSource.FromHwnd(helper.Handle);
            // 1. Hook up the window message handler for drag, lock, and move events
             source?.AddHook(HwndHook);          
+            source?.AddHook(WndProc);
             // 2. Subscribe to the DpiChanged event to fix the vertical ruler margin when the DPI changes
-          //  source.DpiChanged += Source_DpiChanged;
+            //  source.DpiChanged += Source_DpiChanged;
         }
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {          
-            if (msg == WM_MOVE || msg == WM_WINDOWPOSCHANGED)
-            {
+            if (msg ==NativeMethods.WM_MOVE || msg ==NativeMethods.WM_WINDOWPOSCHANGED)
+            {    
                 Window window = (Window)HwndSource.FromHwnd(hwnd).RootVisual;
                 if (window != null)
                 {
@@ -180,10 +144,11 @@ namespace Ruler.Wpf
 
             return IntPtr.Zero;
         }
+       
         private void GetDIPLocationFromWin32Rect(IntPtr hwnd, Window window)
         {
             // 1. Get the window's physical location in screen pixels using the native GetWindowRect
-            if (GetWindowRect(hwnd, out RECT rect))
+            if (Ruler.Wpf.Common.NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT rect))
             {
                 HwndSource source = PresentationSource.FromVisual(window) as HwndSource;
 
@@ -200,9 +165,7 @@ namespace Ruler.Wpf
 
                         double actualLeft = locationInDIP.X;
                         double actualTop = locationInDIP.Y;
-
-                        // Debug logging of the corrected values
-                        Console.WriteLine($"Win32 Location Changed: Left={actualLeft}, Top={actualTop}");
+                      
 
                         // 4. Manually write the corrected position back to the ViewModel properties.
                         _viewModel.UpdateLocation(actualLeft, actualTop);
@@ -215,15 +178,36 @@ namespace Ruler.Wpf
                     _viewModel.UpdateLocation(window.Left, window.Top);
                 }
             }
-        }  
+        }
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg ==NativeMethods.WM_NCHITTEST)
+            {
+               if (_viewModel != null && _viewModel.IsLocked)
+                {
+                  // 4. Override the result to HTCAPTION (2). 
+                        // This tells Windows to treat the mouse click as a drag action,
+                        // disabling the resize but allowing the window to be moved.
+                        handled = true;
+                        return new IntPtr(Ruler.Wpf.Common.NativeMethods.HTCAPTION);
+                    }
+                
 
+                // If not locked, or not over a resize area, return the original result.
+                return IntPtr.Zero;
+            }
+
+            // Return 0 for default processing for all other messages
+            return IntPtr.Zero;
+        }
+        private bool _isFullyLoaded = false;
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (_viewModel is null)
+            if (!_isFullyLoaded || _viewModel is null)
             {
                 return;
-            }                
-           _viewModel.SetRulerDimensions(e.NewSize.Width, e.NewSize.Height);
+            }
+            _viewModel.SetRulerDimensions(e.NewSize.Width, e.NewSize.Height);
         }
 
         private void Window_LocationChanged(object sender, EventArgs e)
@@ -236,7 +220,7 @@ namespace Ruler.Wpf
                 IntPtr windowHandle = new WindowInteropHelper(window).Handle;
 
                 // 1. Call the native Windows API to get the true screen position in pixels
-                if (GetWindowRect(windowHandle, out RECT rect))
+                if (Ruler.Wpf.Common.NativeMethods.GetWindowRect(windowHandle, out NativeMethods.RECT rect))
                 {
                     // 2. Convert the Win32 pixel coordinates to WPF's Device Independent Pixels (DIPs)
                     PresentationSource source = PresentationSource.FromVisual(window);
@@ -267,15 +251,19 @@ namespace Ruler.Wpf
                     //_viewModel.LocationY = window.Top;
                 }
             }
+            if (_viewModel.IsAutoScaled)
+            {
+                ApplySystemDpiScale();
+            }
         }
         private const int MONITOR_DEFAULTTONULL = 0x00000000;
 
-        private static bool IsWindowVisible(RECT rect)
+        private static bool IsWindowVisible(Ruler.Wpf.Common.NativeMethods.RECT rect)
         {
             // MonitorFromRect returns a handle (IntPtr) to the display monitor
             // that intersects the rectangle. We use MONITOR_DEFAULTTONULL (0)
             // so it returns NULL if the rectangle does not intersect any display monitor.
-            IntPtr monitorHandle = MonitorFromRect(ref rect, MONITOR_DEFAULTTONULL);
+            IntPtr monitorHandle =NativeMethods.MonitorFromRect(ref rect, MONITOR_DEFAULTTONULL);
 
             // If the handle is not zero (NULL), a monitor was found, meaning the window is visible.
             return monitorHandle != IntPtr.Zero;
@@ -284,9 +272,9 @@ namespace Ruler.Wpf
         /// <summary>
         /// Helper to convert WPF position/size to native RECT.
         /// </summary>
-        private RECT GetWindowRectFromWpf()
+        private NativeMethods.RECT GetWindowRectFromWpf()
         {
-            return new RECT
+            return new NativeMethods.RECT
             {
                 Left = (int)this.Left,
                 Top = (int)this.Top,
@@ -310,6 +298,7 @@ namespace Ruler.Wpf
 
             }
         }
+       
         private void RulerCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
         {
             RulerCanvas.ReleaseMouseCapture();

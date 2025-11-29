@@ -38,163 +38,7 @@
 
     <Window.Resources>
         <converters:BooleanToResizeModeConverter x:Key="BooleanToResizeModeConverter"/>
-        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        
-        <DataTemplate x:Key="TopHorizontalRulerTickTemplate">
-            <Grid>
-                <StackPanel Orientation="Vertical">
-                    <Rectangle Fill="Black" Width="1" Height="{Binding TickSize}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,0,0,0" />
-                    <TextBlock Foreground="Black" Text="{Binding Label}" FontSize="12" HorizontalAlignment="Left" Margin="0,2,0,0"/>
-                </StackPanel>
-            </Grid>
-        </DataTemplate>
-
-        <!-- DataTemplate for the bottom horizontal ruler ticks, with a vertical flip -->
-        <DataTemplate x:Key="BottomHorizontalRulerTickTemplate">
-            <Grid>
-                <StackPanel Orientation="Vertical">
-                    <Rectangle Fill="Black" Width="1" Height="{Binding TickSize}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,0,0,0" />
-                    <TextBlock Text="{Binding Label}" Foreground="Black" FontSize="12" HorizontalAlignment="Left" Margin="0,2,0,0">
-                        <TextBlock.RenderTransform>
-                            <ScaleTransform ScaleY="-1" />
-                        </TextBlock.RenderTransform>
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsLabelVisible}" Value="False">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsLabelVisible}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>    
-                    <StackPanel.RenderTransform>
-                        <ScaleTransform ScaleY="-1" />
-                    </StackPanel.RenderTransform>
-                </StackPanel>
-            </Grid>
-        </DataTemplate>    
-
-        <!-- 🛑 FIX: Removed temporary backgrounds from VerticalRightContainerStyle 🛑 -->
-        <Style x:Key="VerticalRightContainerStyle" TargetType="ContentPresenter">
-            <Setter Property="Canvas.Top" Value="{Binding Position}"/>
-            <!-- The negative margin was pushing the content out. Changed to zero. -->
-
-            
-            <!-- This MUST be Right so the content pushes against the right edge of the Canvas -->
-            <Setter Property="HorizontalAlignment" Value="Right"/>
-
-            <!-- These setters are redundant since they are on the ItemsControl, but harmless. -->
-            <Setter Property="Grid.Row" Value="1" />
-            <Setter Property="Grid.Column" Value="2" />
-        </Style>
-      
-        <DataTemplate x:Key="RightVerticalRulerTickTemplate">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" >
-
-
-                <Rectangle 
-    Fill="Black"
-    Width="{Binding TickSize}"
-    Height="1"
-    VerticalAlignment="Center"
-    HorizontalAlignment="Stretch"
-                    />
-
-
-                <TextBlock 
-                    Text="{Binding Label}"
-                    FontSize="12"
-                    Foreground="Black"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Left"
-                    >
-
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsLabelVisible}" Value="False">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding IsLabelVisible}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                    <TextBlock.RenderTransform>
-                        <ScaleTransform ScaleX="-1" />
-                    </TextBlock.RenderTransform>
-                </TextBlock>
-
-               
-                
-                <StackPanel.RenderTransform>
-                    <ScaleTransform ScaleX="-1" />
-                </StackPanel.RenderTransform>
-            </StackPanel>
-        </DataTemplate>
-        
-        <Style x:Key="HorizontalBottomContainerStyle" TargetType="ContentPresenter">
-            <Setter Property="Canvas.Left" Value="{Binding Position}"/>
-            <Setter Property="Canvas.Top" Value="0"/>
-        </Style>
-
-        <Style x:Key="VerticalLeftContainerStyle" TargetType="{x:Type ContentPresenter}">
-            <!-- Binds the vertical position from the Tick model -->
-            <Setter Property="Canvas.Top" Value="{Binding Position}"/>
-
-            <!-- 
-            *** THE FIX ***
-            Shifts the entire 1px-high element up by 0.5px 
-            to center it perfectly on the Position coordinate (e.g., y=0).
-        -->
-            <Setter Property="Margin" Value="0, 0, 0, 0"/>
-
-            <!-- Other standard Canvas properties -->
-            <Setter Property="Canvas.Left" Value="0"/>
-            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        </Style>
-
-        <!-- 
-        TEMPLATE 1: Left Vertical Ruler Tick Template (No manual margin here)
-    -->
-        <DataTemplate x:Key="LeftVerticalRulerTickTemplate">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0" >
-
-                <!-- 1. The Tick Line (1 pixel high) -->
-                <Rectangle 
-                Fill="Black"
-                Width="{Binding TickSize}"
-                Height="1"
-                VerticalAlignment="Center" 
-                HorizontalAlignment="Left"
-                Margin="0,0,5,0" />
-
-                <!-- 2. The Label. VerticalAlignment="Center" ensures it aligns to the 1px line. -->
-                <TextBlock 
-                Text="{Binding Label}"
-                FontSize="12"
-                Foreground="Black"
-                VerticalAlignment="Center"
-                HorizontalAlignment="Left"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <Style x:Key="HorizontalTopContainerStyle" TargetType="ContentPresenter">
-            <Setter Property="Canvas.Top" Value="0"/>
-            <Setter Property="Canvas.Left" Value="{Binding Position}"/>
-        </Style>
-        <ItemsPanelTemplate x:Key="VerticalRulerItemsPanel">
-            <Grid IsItemsHost="True" />
-        </ItemsPanelTemplate>
-
-        <ItemsPanelTemplate x:Key="HorizontalRulerItemsPanel">
-            <Canvas IsItemsHost="True" />
-        </ItemsPanelTemplate>
+        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>      
     </Window.Resources>
     <Window.ContextMenu >
         <ContextMenu Background="Gray">
@@ -235,12 +79,26 @@
                 <MenuItem Header="Save Everything" Command="{Binding SetSaveTypeCommand}" CommandParameter="all" IsCheckable="True" IsChecked="{Binding IsSaveTypeAll}"/>
 
             </MenuItem>
-            <!--<MenuItem Header="Scale">
-          <MenuItem Header="1x" Command="{Binding SetScaleCommand}" CommandParameter="1" IsCheckable="True" IsChecked="{Binding Scale, Converter={Binding Source={x:Reference MainWindows}, Path=IntToBool}, ConverterParameter=1}"/>
-          <MenuItem Header="2x" Command="{Binding SetScaleCommand}" CommandParameter="2" IsCheckable="True" IsChecked="{Binding Scale, Converter={Binding Source={x:Reference MainWindows}, Path=IntToBool}, ConverterParameter=2}"/>
-          <MenuItem Header="4x" Command="{Binding SetScaleCommand}" CommandParameter="4" IsCheckable="True" IsChecked="{Binding Scale, Converter={Binding Source={x:Reference MainWindows}, Path=IntToBool}, ConverterParameter=4}"/>
-          <MenuItem Header="8x" Command="{Binding SetScaleCommand}" CommandParameter="8" IsCheckable="True" IsChecked="{Binding Scale, Converter={Binding Source={x:Reference MainWindows}, Path=IntToBool}, ConverterParameter=8}"/>
-      </MenuItem>-->
+            <MenuItem Header="Scale">
+                <MenuItem Header="Auto Scaled" Command="{Binding AutoScaleCommand}" CommandParameter="1" IsCheckable="True" IsChecked="{Binding IsScaleAuto,Mode=OneWay}"/>
+                <MenuItem Header="25%" Command="{Binding ManualScaleCommand}" CommandParameter="25" IsCheckable="True" IsChecked="{Binding IsScale25Percent,Mode=OneWay}"/>
+                <MenuItem Header="33%" Command="{Binding ManualScaleCommand}" CommandParameter="33" IsCheckable="True" IsChecked="{Binding IsScale33Percent,Mode=OneWay}"/>
+                <MenuItem Header="50%" Command="{Binding ManualScaleCommand}" CommandParameter="50" IsCheckable="True" IsChecked="{Binding IsScale50Percent,Mode=OneWay}"/>
+                <MenuItem Header="67%" Command="{Binding ManualScaleCommand}" CommandParameter="67" IsCheckable="True" IsChecked="{Binding IsScale67Percent,Mode=OneWay}"/>
+                <MenuItem Header="75%" Command="{Binding ManualScaleCommand}" CommandParameter="75" IsCheckable="True" IsChecked="{Binding IsScale75Percent,Mode=OneWay}"/>
+                <MenuItem Header="80%" Command="{Binding ManualScaleCommand}" CommandParameter="80" IsCheckable="True" IsChecked="{Binding IsScale80Percent,Mode=OneWay}"/>
+                <MenuItem Header="90%" Command="{Binding ManualScaleCommand}" CommandParameter="90" IsCheckable="True" IsChecked="{Binding IsScale90Percent,Mode=OneWay}"/>
+                <MenuItem Header="100%" Command="{Binding ManualScaleCommand}" CommandParameter="100" IsCheckable="True" IsChecked="{Binding IsScale100Percent,Mode=OneWay}"/>
+                <MenuItem Header="110%" Command="{Binding ManualScaleCommand}" CommandParameter="110" IsCheckable="True" IsChecked="{Binding IsScale110Percent,Mode=OneWay}"/>
+                <MenuItem Header="125%" Command="{Binding ManualScaleCommand}" CommandParameter="125" IsCheckable="True" IsChecked="{Binding IsScale125Percent,Mode=OneWay}"/>
+                <MenuItem Header="150%" Command="{Binding ManualScaleCommand}" CommandParameter="150" IsCheckable="True" IsChecked="{Binding IsScale150Percent,Mode=OneWay}"/>
+                <MenuItem Header="175%" Command="{Binding ManualScaleCommand}" CommandParameter="175" IsCheckable="True" IsChecked="{Binding IsScale175Percent,Mode=OneWay}"/>
+                <MenuItem Header="200%" Command="{Binding ManualScaleCommand}" CommandParameter="200" IsCheckable="True" IsChecked="{Binding IsScale200Percent,Mode=OneWay}"/>
+                <MenuItem Header="250%" Command="{Binding ManualScaleCommand}" CommandParameter="250" IsCheckable="True" IsChecked="{Binding IsScale250Percent,Mode=OneWay}"/>
+                <MenuItem Header="300%" Command="{Binding ManualScaleCommand}" CommandParameter="300" IsCheckable="True" IsChecked="{Binding IsScale300Percent,Mode=OneWay}"/>
+                <MenuItem Header="400%" Command="{Binding ManualScaleCommand}" CommandParameter="400" IsCheckable="True" IsChecked="{Binding IsScale400Percent,Mode=OneWay}"/>
+                <MenuItem Header="500%" Command="{Binding ManualScaleCommand}" CommandParameter="50" IsCheckable="True" IsChecked="{Binding IsScale500Percent,Mode=OneWay}"/>
+               </MenuItem>
             <Separator/>
             <MenuItem Header="Close" Command="{Binding ExitCommand}">
                 <MenuItem.CommandParameter>
@@ -260,7 +118,9 @@
             CornerRadius="0" 
             BorderBrush="Black" 
             BorderThickness="1">
-
+        <Border.LayoutTransform>
+            <ScaleTransform ScaleX="{Binding ScaleFactor}" ScaleY="{Binding ScaleFactor}"/>
+        </Border.LayoutTransform>
         <!-- 
             The ToolTip is set using PROPERTY ELEMENT SYNTAX (<Border.ToolTip>...</Border.ToolTip>). 
             It is NOT a content child. This is correct.

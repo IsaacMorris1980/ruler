@@ -1,4 +1,5 @@
 ﻿using Ruler.Wpf.Common;
+using Ruler.Wpf.Enums;
 
 using System.Security.AccessControl;
 using System.Windows;
@@ -64,11 +65,20 @@ namespace Ruler.Wpf.Models
             get;
             set;
         }
+        double  ScaleFactor
+        {
+            get;
+            set;
+        }
+         bool IsAutoScaled
+        {
+            get;
+            set;
+        }
 
-       
-        //bool IsHighContrast { get; set; }
-        //double ZoomFactor { get; set; }
-        //UnitType Unit { get; set; }
+       // bool IsHighContrast { get; set; }
+        double ZoomFactor { get; set; }
+        MeasurementUnit CurrentUnit { get; set; }  
         bool IsGuideLineVisible { get; set; }
         double GuideLinePosition { get; set; }
 

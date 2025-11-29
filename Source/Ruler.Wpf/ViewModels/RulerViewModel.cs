@@ -53,7 +53,25 @@ namespace Ruler.Wpf.ViewModels
         private bool _isOpacity100Percent;
 
         private bool _isInitialized = false;
-
+        // Scle factor flags
+        private bool _isAutoScaled;
+        private bool _is25PercentScaled;
+        private bool _is33PercentScaled;
+        private bool _is50PercentScaled;
+        private bool _is67PercentScaled;
+        private bool _is75PercentScaled;
+        private bool _is80PercentScaled;
+        private bool _is90PercentScaled;
+        private bool _is100PercentScaled;
+        private bool _is110PercentScaled;
+        private bool _is125PercentScaled;
+        private bool _is150PercentScaled;
+        private bool _is175PercentScaled;
+        private bool _is200PercentScaled;
+        private bool _is250PercentScaled;
+        private bool _is300PercentScaled;
+        private bool _is400PercentScaled;
+        private bool _is500PercentScaled;
         private Dictionary<int, Action<bool>> _opacitySetterMap;
         private Dictionary<SaveTypes, Action<bool>> _saveTypeSetterMap;
 
@@ -75,6 +93,8 @@ namespace Ruler.Wpf.ViewModels
         private ICommand _showAboutCommand;
         private ICommand _duplicateCommand;
         private ICommand _resetToDefaultCommand;
+        private ICommand _manualScaleCommand;
+        private ICommand _autoScaleCommand;
 
         private int _horizontalMinHeight = 85;
         private int _vericalMinWidth = 93;
@@ -370,7 +390,25 @@ namespace Ruler.Wpf.ViewModels
                 }
             }
         }
-        #endregion      
+        #endregion
+        #region ScaleBooleans
+        public bool IsAutoScaled
+        {
+            get => _rulerInfo.IsAutoScaled;
+            set
+            {
+                if (_rulerInfo.IsAutoScaled != value)
+                {
+                    _isAutoScaled = value;
+                    _rulerInfo.IsAutoScaled = value;
+                    OnPropertyChanged();
+                    // Ensure manual scale checkmarks are updated when auto scale changes
+                    UpdateScaleFlags();
+                }
+            }
+        }
+
+        #endregion
         // State variables for mouse interaction
         private Point _startPoint;
         private Size _startSize;
@@ -388,6 +426,26 @@ namespace Ruler.Wpf.ViewModels
         private double _guideLinePosition;
         private double _minheight = 45;
         private double _minwidth = 40;
+        private double _scaleFactor;
+        // --- CONSTANTS EXPOSED FOR VIEW CONVERTER ---
+        public const double UnscaledVerticalHeadTotalThickness = 77.0;
+        public const double UnscaledHorizontalHeadTotalThickness = 82.0;
+        public const double UnscaledVerticalHeadThickness = 38.5;
+        public const double UnscaledHorizontalHeadThickness = 41.0;
+        // ---------------------------------------------
+
+        // --- DPI CONVERSION CONSTANTS (Based on standard WPF 96 DPI) ---
+        private const double StandardDipsPerInch = 96.0;
+        private const double DipsPerCentimeter = StandardDipsPerInch / 2.54;
+        private const double DipsPerMillimeter = DipsPerCentimeter / 10.0;
+
+        // Typographic conversions
+        private const double DipsPerPica = StandardDipsPerInch / 6.0;
+        private const double DipsPerPoint = StandardDipsPerInch / 72.0;
+        // Derived units
+        private const double DipsPerMicrometer = DipsPerMillimeter / 1000.0;
+
+
 
         public bool IsGuideLineVisible
         {
@@ -455,9 +513,9 @@ namespace Ruler.Wpf.ViewModels
             {
                 if (IsVertical)
                 {                 
-                    return _minwidth + (Width - 77);
+                    return (_minwidth + (Width - 77))*ScaleFactor;
                 }
-                return  _minheight+( Height - 82);
+                return  (_minheight+( Height - 82)) * ScaleFactor;
 
             }
             set
@@ -465,6 +523,21 @@ namespace Ruler.Wpf.ViewModels
                 if (_middlewidth != value)
                 {
                     _middlewidth = value;
+                }
+            }
+        }
+        public ObservableCollection<RulerScale> ScaleOptions { get; }
+        public RulerScale SelectedScale
+        {
+            get => _rulerInfo.SelectedScale;
+            set
+            {
+                if (_rulerInfo.SelectedScale!=value)
+                {
+                    // Recalculate ticks whenever the scale changes
+                  //  SetScale(value);
+                    OnPropertyChanged();
+                    
                 }
             }
         }
@@ -544,7 +617,57 @@ namespace Ruler.Wpf.ViewModels
             _setSaveTypeCommand = new RelayCommand(SetSaveType);
             _showAboutCommand = new RelayCommand(NavigateAbout);
             _duplicateCommand = new RelayCommand(DuplicateRuler);
+            _autoScaleCommand = new RelayCommand(ExecuteToggleAutoScaleCommand);
+            _manualScaleCommand = new RelayCommand(ExecuteManualScaleCommand);
         }
+        private void ExecuteManualScaleCommand(object parameter)
+        {
+            if (parameter is string scaleString && double.TryParse(scaleString, out double scalePercent))
+            {
+                // 1. Disable auto-scaling
+                IsAutoScaled = false;
+
+                // 2. Set the manual scale factor
+                // Convert percentage (e.g., 125) to factor (e.g., 1.25)
+                ScaleFactor = scalePercent / 100.0;
+            }
+        }
+
+        private void ExecuteToggleAutoScaleCommand(object parameter)
+        {
+            // The command only toggles the mode. The MainWindow.xaml.cs will observe 
+            // the change and call SetAutoScaleFactor with the actual system DPI value.
+            if (!IsAutoScaled)
+            {
+                IsAutoScaled = true;
+            }
+            else
+            {
+                // If it's already autoscaled, toggle it back to default manual 100%
+                IsAutoScaled = false;
+                ScaleFactor = 1.0;
+            }
+            UpdateScaleFlags();
+        }
+        public bool IsScaleAuto => IsAutoScaled;
+        public bool IsScale25Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.25) < 0.001;
+        public bool IsScale33Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.33) < 0.001;
+        public bool IsScale50Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.50) < 0.001;
+        public bool IsScale67Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.67) < 0.001;
+        public bool IsScale75Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.75) < 0.001;
+        public bool IsScale80Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.80) < 0.001;
+        public bool IsScale90Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.90) < 0.001;
+        public bool IsScale100Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.00) < 0.001;
+        public bool IsScale110Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.10) < 0.001;
+        public bool IsScale125Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.25) < 0.001;
+        public bool IsScale150Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.50) < 0.001;
+        public bool IsScale175Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.75) < 0.001;
+        public bool IsScale200Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 2.00) < 0.001;
+        public bool IsScale250Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 2.50) < 0.001;
+        public bool IsScale300Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 3.00) < 0.001;
+        public bool IsScale400Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 4.00) < 0.001;
+        public bool IsScale500Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 5.00) < 0.001;
+
 
         public void SetOpacityFlags(double opacity)
         {
@@ -903,6 +1026,9 @@ namespace Ruler.Wpf.ViewModels
         public ICommand ShowAboutCommand => _showAboutCommand;
         public ICommand DuplicateCommand => _duplicateCommand;
         public ICommand ResetToDefaultCommand => _resetToDefaultCommand;
+        public ICommand ManualScaleCommand => _manualScaleCommand;
+        public ICommand AutoScaleCommand => _autoScaleCommand;
+      
 
         // Logic for the ToggleLockCommand
         private void ToggleLock(object parameter)
@@ -927,7 +1053,9 @@ namespace Ruler.Wpf.ViewModels
             LocationX = defaultRuler.LocationX;
             LocationY = defaultRuler.LocationY;
             SaveType = defaultRuler.SaveType;
-            
+            _scaleFactor = _rulerInfo.ScaleFactor;
+            _isAutoScaled = _rulerInfo.IsAutoScaled;
+
             _isLoadingState = false;    
             Console.WriteLine("Reset to default called.");
             Console.WriteLine($"Width: {_rulerInfo.Width}, Height: {_rulerInfo.Height}, IsVertical: {_rulerInfo.IsVertical}, Opacity: {_rulerInfo.Opacity}, ShowToolTip: {_rulerInfo.ShowToolTip}, IsLocked: {_rulerInfo.IsLocked}, TopMost: {_rulerInfo.TopMost}, LocationX: {_rulerInfo.LocationX}, LocationY: {_rulerInfo.LocationY}, SaveType: {_rulerInfo.SaveType}");
@@ -954,6 +1082,65 @@ namespace Ruler.Wpf.ViewModels
             OnPropertyChanged(nameof(SaveType));
             Console.WriteLine($"SaveType was set: {SaveType}");
         }
+      
+       
+        public void UpdateScaleFlags()
+        {
+            OnPropertyChanged(nameof(IsScaleAuto));
+            OnPropertyChanged(nameof(IsScale25Percent));
+            OnPropertyChanged(nameof(IsScale33Percent));
+            OnPropertyChanged(nameof(IsScale50Percent));
+            OnPropertyChanged(nameof(IsScale67Percent));
+            OnPropertyChanged(nameof(IsScale75Percent));
+            OnPropertyChanged(nameof(IsScale80Percent));
+            OnPropertyChanged(nameof(IsScale90Percent));
+            OnPropertyChanged(nameof(IsScale100Percent));
+            OnPropertyChanged(nameof(IsScale110Percent));
+            OnPropertyChanged(nameof(IsScale125Percent));
+            OnPropertyChanged(nameof(IsScale150Percent));
+            OnPropertyChanged(nameof(IsScale175Percent));
+            OnPropertyChanged(nameof(IsScale200Percent));
+            OnPropertyChanged(nameof(IsScale250Percent));
+            OnPropertyChanged(nameof(IsScale300Percent));
+            OnPropertyChanged(nameof(IsScale400Percent));
+            OnPropertyChanged(nameof(IsScale500Percent));
+        }
+        public double ScaleFactor
+        {
+            get => _rulerInfo.ScaleFactor;
+            set
+            {
+                if (_rulerInfo.ScaleFactor!= value)
+                {
+                    _scaleFactor = value;
+                    _rulerInfo.ScaleFactor = value;
+                    OnPropertyChanged();
+                    // Call the method that recalculates and draws the ruler ticks based on the new scale
+                   GenerateRulerTicks(IsVertical ? Height : Width);
+                    UpdateScaleFlags();
+                }
+            }
+        }
+        public void SetAutoScaleFactor(double systemDpiScale)
+        {
+            _loggingService.LogInfo ($"Applying Autoscale: {systemDpiScale * 100}%");
+
+            // Only update ScaleFactor if IsAutoScaled is true, otherwise keep the manual value
+            if (IsAutoScaled)
+            {
+                // Set the scale factor to the system DPI value
+                ScaleFactor = systemDpiScale;
+            }
+
+            // Ensure UI updates if the mode has changed
+           
+        }
+     
+        /// <summary>
+        /// Indicates if the system's DPI is being used for scaling.
+        /// </summary>
+     
+
 
         // Logic for the ExitCommand
         private void ExitApplication(object parameter)
@@ -1068,19 +1255,29 @@ namespace Ruler.Wpf.ViewModels
             OnPropertyChanged(nameof(BottomRulerTicks));
             OnPropertyChanged(nameof(TopRulerTicks));
         }
-        public static IEnumerable<RulerTick> GenerateRulerTicks(double rulerLength)
+        public IEnumerable<RulerTick> GenerateRulerTicks(double rulerLength)
         {
             var ticks = new List<RulerTick>();
+            double maxLogicalLength = rulerLength;
+
+            // We need to know how many DIPs one ruler unit covers.
+            double dipPerUnit = ScaleFactor;
+            int maxRulerUnit = (int)Math.Ceiling(maxLogicalLength / dipPerUnit);
 
             // We iterate through the entire length of the ruler to determine tick positions.
-            for (int i = 0; i < (int)rulerLength; i++)
+            for (int i = 0;i<=maxRulerUnit ; i++)
             {
+                double tickPositionInDips = i * dipPerUnit;
+                if (tickPositionInDips > maxLogicalLength)
+                {
+                    break;
+                }
                 // Every 100 pixels, we create a major tick with a label.
                 if (i % 100 == 0)
                 {
                     ticks.Add(new RulerTick
                     {
-                        Position = i,
+                        Position = tickPositionInDips,
                         Label = i.ToString(),
                         TickSize = 25,
                         IsLabelVisible = true
@@ -1091,7 +1288,7 @@ namespace Ruler.Wpf.ViewModels
                 {
                     ticks.Add(new RulerTick
                     {
-                        Position = i,
+                        Position = tickPositionInDips,
                         TickSize = 20
 
                     });
@@ -1101,7 +1298,7 @@ namespace Ruler.Wpf.ViewModels
                 {
                     ticks.Add(new RulerTick
                     {
-                        Position = i,
+                        Position = tickPositionInDips,
                         TickSize = 10
                     });
                 }
@@ -1110,7 +1307,7 @@ namespace Ruler.Wpf.ViewModels
                 {
                     ticks.Add(new RulerTick
                     {
-                        Position = i,
+                        Position = tickPositionInDips,
                         TickSize = 5
                     });
                 }
@@ -1119,7 +1316,7 @@ namespace Ruler.Wpf.ViewModels
                 {
                     ticks.Add(new RulerTick
                     {
-                        Position = i,
+                        Position = tickPositionInDips,
                         TickSize = 2
                     });
                 }
@@ -1203,26 +1400,19 @@ namespace Ruler.Wpf.ViewModels
             OnPropertyChanged(nameof(LocationX));
             OnPropertyChanged(nameof(DisplayedLocation));
             OnPropertyChanged(nameof(SaveType));
+            OnPropertyChanged(nameof(RulerMeasurementsText));
+            OnPropertyChanged(nameof(ScaleFactor));
+            OnPropertyChanged(nameof(IsAutoScaled));
             // 6. Reset flag after loading is complete
             _isLoadingState = false;
 
         }
 
-        internal void SetGuideLinePosition(double position)
+        public void SetGuideLinePosition(double position)
         {
             GuideLinePosition = position;
         }
 
-        internal void UpdateRulerContentDimensions(double canvasContentHeight, double canvasContentWidth, double topRulerContentHeight, double leftRulerContentWidth, double rightRulerContentWidth, double bottomRulerContentHeight)
-        {
-            if (topRulerContentHeight > 0 && bottomRulerContentHeight > 0)
-            {
-                MiddleWidth = canvasContentHeight - topRulerContentHeight - bottomRulerContentHeight;
-            }
-            else if (leftRulerContentWidth > 0 && rightRulerContentWidth > 0)
-            {
-                MiddleWidth = canvasContentWidth - leftRulerContentWidth - rightRulerContentWidth;
-            }
-        }
+       
     }
 }
