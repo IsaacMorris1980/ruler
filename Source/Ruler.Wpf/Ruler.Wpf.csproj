@@ -84,7 +84,8 @@
     <Compile Include="Converters\CenterConverter.cs" />
     <Compile Include="Converters\BooleanToResizeModeConverter.cs" />
     <Compile Include="Enums\MeasurementUnit.cs" />
-    <Compile Include="Models\RulerScale.cs" />
+    <Compile Include="Models\ModelBase.cs" />
+    <Compile Include="Models\OptionsBase.cs" />
     <Compile Include="Services\DialogService.cs" />
     <Compile Include="Services\IDialogService.cs" />
     <Compile Include="Common\NativeMethods.cs" />
@@ -100,19 +101,21 @@
     <Compile Include="Controls\PassthroughBorder.cs" />
     <Compile Include="Converters\BooleanToVisibilityConverter.cs" />
     <Compile Include="Models\IRulerInfo.cs" />
-    <Compile Include="Models\LabelInfo.cs" />
-    <Compile Include="Models\LineInfo.cs" />
-    <Compile Include="Models\ResizeRegion.cs" />
-    <Compile Include="Models\RulerDataTemplateSelector.cs" />
     <Compile Include="Models\RulerInfo.cs" />
     <Compile Include="Models\RulerTick.cs" />
-    <Compile Include="Models\RulerShapes.cs" />
     <Compile Include="Services\ILoggingService.cs" />
     <Compile Include="Services\LoggingService.cs" />
     <Compile Include="Services\Persistence\CommandLineRulerFactory.cs" />
     <Compile Include="Services\Persistence\SingleRulerPersistenceService.cs" />
     <Compile Include="Services\Persistence\Strategy\IPersistenceStrategy.cs" />
+    <Compile Include="Services\Persistence\Strategy\IUnitStrategy.cs" />
     <Compile Include="Services\Persistence\Strategy\SettingsPersistenceStrategy.cs" />
+    <Compile Include="Services\Persistence\Strategy\UnitStrategyFactory.cs" />
+    <Compile Include="Services\Persistence\Strategy\Units\CentimeterUnitStrategy.cs" />
+    <Compile Include="Services\Persistence\Strategy\Units\InchUnitStrategy.cs" />
+    <Compile Include="Services\Persistence\Strategy\Units\MilimeterUnitStrategy.cs" />
+    <Compile Include="Services\Persistence\Strategy\Units\PixelUnitStrategy.cs" />
+    <Compile Include="Services\Persistence\Strategy\Units\PointUnitStrategy.cs" />
     <Compile Include="SetSizeWindow.xaml.cs">
       <DependentUpon>SetSizeWindow.xaml</DependentUpon>
     </Compile>
@@ -138,10 +141,6 @@
     <Page Include="SetSizeWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Themes\Generic.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
@@ -177,7 +176,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Presemters\" />
     <Folder Include="Views\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

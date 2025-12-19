@@ -1,6 +1,7 @@
 ﻿using Ruler.Wpf.Common;
 using Ruler.Wpf.Models;
 using Ruler.Wpf.Services.Persistence.Strategy;
+using Ruler.Wpf.Enums;
 
 using System;
 using System.Collections.Generic;

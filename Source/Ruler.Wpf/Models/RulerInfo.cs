@@ -12,150 +12,98 @@ using System.Windows;
 
 namespace Ruler.Wpf.Models
 {
-    public class RulerInfo:IRulerInfo, INotifyPropertyChanged
+    public class RulerInfo:ModelBase, IRulerInfo
     {
+        private double _width = 500;
+        private double _height = 150;
+        private double _left = 100;
+        private double _top = 100;
+        private bool _isVertical = false;
+        private double _opacity = 1.0;
+        private bool _showToolTip = true;
+        private bool _isLocked = false;
+        private bool _topMost = true;
+        private string _saveType = "none";
+        private double _scaleFactor = 1.0;
+        private bool _isAutoScaled = true; 
+        private bool _isZoomEnabled = false;
+        private MeasurementUnit _currentUnit = MeasurementUnit.Pixels;
+        private double _zoomFactor = 1.0;      
+
         public double Width
         {
-            get;
-            set;
+            get=> _width;
+            set=>SetProperty(ref _width,value);
         }
-
         public double Height
         {
-            get;
-            set;
-        }
-
-        /// <summary>
-        /// TODO
-        /// </summary>
+            get => _height;
+            set => SetProperty(ref _height, value);
+        }               
         public bool IsVertical
         {
-            get;
-            set;
+            get => _isVertical;
+            set => SetProperty(ref _isVertical, value);
         }
-
         public double Opacity
         {
-            get;
-            set;
+           get => _opacity;
+            set => SetProperty(ref _opacity, value);
         }
-
-        /// <summary>
-        /// TODO
-        /// </summary>
         public bool ShowToolTip
         {
-            get;
-            set;
+            get => _showToolTip;
+            set => SetProperty(ref _showToolTip, value);
         }
-
-        /// <summary>
-        /// TODO
-        /// </summary>
         public bool IsLocked
         {
-            get;
-            set;
+            get => _isLocked;
+            set => SetProperty(ref _isLocked, value);
         }
-
         public bool TopMost
         {
-            get;
-            set;
+            get=> _topMost;
+            set => SetProperty(ref _topMost, value);
         }
-        public double LocationX
+        public double Left
         {
-            get;
-            set;
+            get=> _left;
+            set => SetProperty(ref _left, value);
         }
-        public double LocationY
+        public double Top
         {
-            get;
-            set;
-        }
-        public Point DisplayedLocation
-        {
-            get
-            {
-                return new Point(LocationX, LocationY);
-            }
-            set
-            {
-                LocationX = value.X;
-                LocationY = value.Y;
-            }
-        }   
+            get=> _top;
+            set => SetProperty(ref _top, value);
+        }      
         public SaveTypes SaveType
         {
-            get;
-            set;
-        }      
-        public bool IsGuideLineVisible 
-        { 
-            get;
-            set; 
-        }
-        public double GuideLinePosition 
-        { 
-            get;
-            set; 
-        }
+            get=> (SaveTypes)Enum.Parse(typeof(SaveTypes), _saveType);
+            set=> SetProperty(ref _saveType, value.ToString());
+        }       
         public double ScaleFactor
         {
-            get;
-            set;
-        }=1.0;
+            get=> _scaleFactor;
+            set=>SetProperty(ref _scaleFactor,value);
+        }
         public bool IsAutoScaled 
         { 
-            get;
-            set;
-        }=false;
-        private RulerScale _selectedScale;
-
-        public RulerScale SelectedScale
+            get=>_isAutoScaled;
+            set => SetProperty(ref _isAutoScaled,value);
+        }     
+        public MeasurementUnit CurrentUnit  
         {
-            get => _selectedScale;
-            set
-            {
-                if (_selectedScale != value)
-                {
-                    _selectedScale = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        private MeasurementUnit _currentUnit;
-        private double _zoomFactor = 1.0;
-        public MeasurementUnit CurrentUnit
-        {
-            get
-            {
-                return _currentUnit;
-            }
-            set
-            {
-                if (_currentUnit != value)
-                {
-                    _currentUnit = value;
-                    OnPropertyChanged();
-                }
-            }
+           get => _currentUnit;
+           set => SetProperty(ref _currentUnit, value);
         }
         public double ZoomFactor
         {
-            get
-            {
-                return _zoomFactor;
-            }
-            set
-            {
-                if (_zoomFactor != value)
-                {
-                    _zoomFactor = value;
-                    OnPropertyChanged();
-                }
-            }
+            get =>  _zoomFactor;            
+            set => SetProperty(ref _zoomFactor, value);
+        }
+        public bool IsZoomEnabled
+        {
+            get => _isZoomEnabled;
+            set => SetProperty(ref _isZoomEnabled, value);
         }
         public static RulerInfo GetDefaultRulerInfo()
         {
@@ -168,11 +116,15 @@ namespace Ruler.Wpf.Models
                 IsLocked = false,
                 IsVertical = false,
                 TopMost = true,
-                LocationX = 0,
-                LocationY = 0,
+                Left = 0,
+                Top = 0,               
                 SaveType = SaveTypes.none,
                 ScaleFactor = 1.0,
-                IsAutoScaled = false
+                IsAutoScaled = false,
+                CurrentUnit = MeasurementUnit.Pixels,
+              ZoomFactor = 1.0,
+                IsZoomEnabled = false,
+               
             };
 
             return rulerInfo;
@@ -187,18 +139,15 @@ namespace Ruler.Wpf.Models
             targetInstance.ShowToolTip = source.ShowToolTip;
             targetInstance.IsLocked = source.IsLocked;
             targetInstance.TopMost = source.TopMost;
-            targetInstance.LocationX = source.LocationX;
-            targetInstance.LocationY = source.LocationY;
+            targetInstance.Left = source.Left;
+            targetInstance.Top = source.Top;
             targetInstance.SaveType = source.SaveType;
             targetInstance.ScaleFactor = source.ScaleFactor;
             targetInstance.IsAutoScaled = source.IsAutoScaled;
-        }
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+            targetInstance.CurrentUnit = source.CurrentUnit;
+            targetInstance.ZoomFactor = source.ZoomFactor;           
+            targetInstance.IsZoomEnabled = source.IsZoomEnabled;
+        }     
 
     }
 }

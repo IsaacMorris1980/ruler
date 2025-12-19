@@ -7,6 +7,7 @@ using System.Windows;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ruler.Wpf.Enums;
 
 namespace Ruler.Wpf.Services.Persistence
 {
@@ -14,7 +15,7 @@ namespace Ruler.Wpf.Services.Persistence
     {       
         public static string ConvertToParameters(RulerInfo rulerInfo)
         {
-            return string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8}", rulerInfo.Width, rulerInfo.Height, rulerInfo.IsVertical, rulerInfo.Opacity, rulerInfo.ShowToolTip, rulerInfo.IsLocked, rulerInfo.TopMost, rulerInfo.DisplayedLocation, rulerInfo.SaveType);
+            return string.Format("{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}", rulerInfo.Width, rulerInfo.Height, rulerInfo.IsVertical, rulerInfo.Opacity, rulerInfo.ShowToolTip, rulerInfo.IsLocked, rulerInfo.TopMost,rulerInfo.Left,rulerInfo.Top, rulerInfo.SaveType);
         }
         public static RulerInfo CovertToRulerInfo(string[] args)
         {
@@ -25,13 +26,12 @@ namespace Ruler.Wpf.Services.Persistence
             string showToolTip = args[4];
             string isLocked = args[5];
             string topMost = args[6];
-            string location = (args.Length >= 8) ? args[7] : "0,0";
-            string savetype = (args.Length >= 9) ? args[8] : "none";
+            string left = (args.Length >= 8) ? args[7] : "0";
+            string top = (args.Length >= 9) ? args[8] : "0";
+            string savetype = (args.Length >= 10) ? args[9] : "none";
 
             SaveTypes saveArgs;
-            string[] startlocation = location.Split(',');
-            Point pt = new Point(int.Parse(startlocation[0]), int.Parse(startlocation[1]));
-            if (!Enum.TryParse<SaveTypes>(savetype, true, out saveArgs))
+                  if (!Enum.TryParse<SaveTypes>(savetype, true, out saveArgs))
             {
                 saveArgs = SaveTypes.none;
             }
@@ -45,7 +45,8 @@ namespace Ruler.Wpf.Services.Persistence
                 ShowToolTip = bool.Parse(showToolTip),
                 IsLocked = bool.Parse(isLocked),
                 TopMost = bool.Parse(topMost),
-                DisplayedLocation = pt,
+                Left = double.Parse(left),
+                Top = double.Parse(top),
                 SaveType = saveArgs
             };
 

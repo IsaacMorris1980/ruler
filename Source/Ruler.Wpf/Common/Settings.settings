@@ -17,7 +17,7 @@
     <Setting Name="vertical" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="top" Type="System.Boolean" Scope="User">
+    <Setting Name="topmost" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="tip" Type="System.Boolean" Scope="User">
@@ -35,10 +35,10 @@
     <Setting Name="opacity" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.6</Value>
     </Setting>
-    <Setting Name="locationx" Type="System.Double" Scope="User">
+    <Setting Name="left" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
-    <Setting Name="locationy" Type="System.Double" Scope="User">
+    <Setting Name="top" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
   </Settings>

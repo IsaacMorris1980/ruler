@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ruler.Wpf.Common
+namespace Ruler.Wpf.Enums
 {
     public enum SaveTypes
     {

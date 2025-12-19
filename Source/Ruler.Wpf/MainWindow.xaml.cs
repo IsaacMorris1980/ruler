@@ -1,9 +1,11 @@
-﻿using Ruler.Wpf.Models;
+﻿using Ruler.Wpf.Common;
 using Ruler.Wpf.Services;
 using Ruler.Wpf.ViewModels;
-using Ruler.Wpf.Common;
+
 using System;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -14,32 +16,14 @@ namespace Ruler.Wpf
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
-    {
-
-       
-       
-        private RulerViewModel _viewModel;
-        private bool _isSizeChangingProgrammatically = false;
-        private bool _isMoving = false;
-        private bool _isResizing = false;
-        private const double EDGE_TOLERANCE = 5.0;
-       
-        private const int SYSTEM_WINDOW_BORDER_SIZE = 8;
-        private const double WINDOW_NON_CLIENT_OFFSET_DIP = 8.0;
-        private Point _mouseDownPosition;
-        private Point _mouseUpPosition;
-
-        
+    {    
+        private RulerViewModel _viewModel;    
         private ILoggingService _loggingService;    
         // Points used for calculating delta movements.
-        private Point _startPoint;
-        private bool isMouseResizeCommand = false;
-        private ResizeRegion resizeRegion = ResizeRegion.None;
+        private Point _startPoint;     
         // Flag to track if a drag operation has started
         private bool _isDragging = false;
-             private const int DpiValue = 96; // Standard DPI
-        private const int MDT_EFFECTIVE_DPI = 0;
-        private double _currentDpiScaleFactor = 1.0;
+      
 
         public MainWindow(RulerViewModel viewModel, ILoggingService loggingService)
         {
@@ -56,8 +40,8 @@ namespace Ruler.Wpf
             {
                 _loggingService.LogInfo("Ruler is NOT visible on any monitor.");
                 _viewModel.DisplayedLocation = new Point(0, 0);
-                _viewModel.LocationX = 0;
-                _viewModel.LocationY = 0;
+                _viewModel.Left = 0;
+                _viewModel.Top = 0;
             }
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
@@ -101,8 +85,8 @@ namespace Ruler.Wpf
                     // Use the ViewModel's stored DIU values directly.
                     // WPF handles the DPI scaling automatically.
                   
-                    this.Left = viewModel.LocationX;
-                    this.Top = viewModel.LocationY;
+                    this.Left = viewModel.Left;
+                    this.Top = viewModel.Top;
      
                     
                     viewModel.IsInitialized = true;
@@ -350,6 +334,42 @@ namespace Ruler.Wpf
                     RulerCanvas.ContextMenu.IsOpen = true;
                 }
             }
+        }
+    }
+    public class BooleanToVisibilityConverter : IValueConverter
+    {
+        // Converts boolean to visibility (true -> Visible, false -> Collapsed)
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool booleanValue)
+            {
+                bool invert = false;
+
+                // Check for the 'ConverterParameter' to invert the logic
+                if (parameter != null && parameter.ToString().Equals("Invert", StringComparison.OrdinalIgnoreCase))
+                {
+                    invert = true;
+                }
+
+                // Apply the logic:
+                // If invert is true, visible when booleanValue is false.
+                // If invert is false, visible when booleanValue is true.
+                Console.WriteLine(booleanValue);
+                Console.WriteLine(invert);
+                if (booleanValue != invert)
+                {
+                    Console.WriteLine("Visible");
+                    return Visibility.Visible;
+                }
+            }
+            Console.WriteLine("Collapsed");
+            return Visibility.Collapsed;
+        }
+
+        // Converts visibility to boolean (not typically needed for UI binding)
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return DependencyProperty.UnsetValue;
         }
     }
 }

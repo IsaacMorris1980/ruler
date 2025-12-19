@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel;
+using Ruler.Wpf.Enums;
 
 
 namespace Ruler.Wpf.Services.Persistence.Strategy
@@ -47,10 +48,9 @@ namespace Ruler.Wpf.Services.Persistence.Strategy
 
         // --- HELPER METHODS ---
         private void SaveLocation(RulerInfo ri)
-        {
-            Settings.Default["location"] = ri.DisplayedLocation;
-            Settings.Default["locationx"] = ri.LocationX;
-            Settings.Default["locationy"] = ri.LocationY;
+        {           
+            Settings.Default["left"] = ri.Left;
+            Settings.Default["top"] = ri.Top;
             Settings.Default["vertical"] = ri.IsVertical;
         }
 
@@ -64,7 +64,7 @@ namespace Ruler.Wpf.Services.Persistence.Strategy
         {
             Settings.Default["opacity"] = ri.Opacity;
             Settings.Default["locked"] = ri.IsLocked;
-            Settings.Default["top"] = ri.TopMost;
+            Settings.Default["topmost"] = ri.TopMost;
             Settings.Default["tip"] = ri.ShowToolTip;
         }
 
@@ -127,13 +127,12 @@ namespace Ruler.Wpf.Services.Persistence.Strategy
             ri.Width = (Settings.Default["width"] == null) ? 400 : (double)Settings.Default["width"];
             ri.Height = (Settings.Default["height"] == null) ? 75 : (double)Settings.Default["height"];
             ri.Opacity = (Settings.Default["opacity"] == null) ? 0.75 : (double)Settings.Default["opacity"];
-            ri.DisplayedLocation = (Settings.Default["location"] == null) ? new Point(0, 0) : (Point)Settings.Default["location"];
             ri.IsVertical = (Settings.Default["vertical"] == null) ? false : (bool)Settings.Default["vertical"];
             ri.IsLocked = (Settings.Default["locked"] == null) ? false : (bool)Settings.Default["locked"];
-            ri.TopMost = (Settings.Default["top"] == null) ? true : (bool)Settings.Default["top"];
+            ri.TopMost = (Settings.Default["topmost"] == null) ? true : (bool)Settings.Default["topmost"];
             ri.ShowToolTip = (Settings.Default["tip"] == null) ? true : (bool)Settings.Default["tip"];
-            ri.LocationX = ( Settings.Default["locationx"] == null) ? 0 : ((double)Settings.Default["locationx"]);
-            ri.LocationY = ( Settings.Default["locationy"] == null) ? 0 : ((double)Settings.Default["locationy"]);
+            ri.Left = ( Settings.Default["left"] == null) ? 0 : ((double)Settings.Default["left"]);
+            ri.Top = ( Settings.Default["top"] == null) ? 0 : ((double)Settings.Default["top"]);
             string savedTypeString = Settings.Default["savetype"] == null ? "none" : (string)Settings.Default["savetype"];
 
             if (Enum.TryParse<SaveTypes>(savedTypeString, true, out SaveTypes loadedSaveType))
@@ -144,8 +143,7 @@ namespace Ruler.Wpf.Services.Persistence.Strategy
             {
                 ri.SaveType = SaveTypes.none;
             }
-            Console.WriteLine($"LocationY: {ri.LocationY}");
-            return ri;
+           return ri;
         }
     }
 }

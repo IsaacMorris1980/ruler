@@ -86,12 +86,12 @@ namespace Ruler.Wpf.Common {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool top {
+        public bool topmost {
             get {
-                return ((bool)(this["top"]));
+                return ((bool)(this["topmost"]));
             }
             set {
-                this["top"] = value;
+                this["topmost"] = value;
             }
         }
         
@@ -158,24 +158,24 @@ namespace Ruler.Wpf.Common {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public double locationx {
+        public double left {
             get {
-                return ((double)(this["locationx"]));
+                return ((double)(this["left"]));
             }
             set {
-                this["locationx"] = value;
+                this["left"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
-        public double locationy {
+        public double top {
             get {
-                return ((double)(this["locationy"]));
+                return ((double)(this["top"]));
             }
             set {
-                this["locationy"] = value;
+                this["top"] = value;
             }
         }
     }

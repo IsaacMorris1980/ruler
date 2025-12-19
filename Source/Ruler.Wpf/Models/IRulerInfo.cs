@@ -50,12 +50,12 @@ namespace Ruler.Wpf.Models
             get;
             set;
         }
-       double LocationX
+       double Left
         {
             get;
             set;
         }
-        double LocationY
+        double Top
         {
             get;
             set;
@@ -77,10 +77,21 @@ namespace Ruler.Wpf.Models
         }
 
        // bool IsHighContrast { get; set; }
-        double ZoomFactor { get; set; }
-        MeasurementUnit CurrentUnit { get; set; }  
-        bool IsGuideLineVisible { get; set; }
-        double GuideLinePosition { get; set; }
+        double ZoomFactor 
+        { 
+            get;
+            set; 
+        }
+        MeasurementUnit CurrentUnit 
+        {
+            get;
+            set;
+        }
+       bool IsZoomEnabled
+        {
+            get;
+            set;
+        }
 
     }
 }

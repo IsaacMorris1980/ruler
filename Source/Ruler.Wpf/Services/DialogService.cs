@@ -1,14 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-
 using Ruler.Wpf.Models;
 using Ruler.Wpf.Services.Persistence;
 using Ruler.Wpf.ViewModels;
-
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace Ruler.Wpf.Services
@@ -58,7 +53,6 @@ namespace Ruler.Wpf.Services
         }
         private List<Window> _openRulers = new List<Window>();
         public IReadOnlyList<Window> OpenRulers => _openRulers;
-
         public void ShowNewRuler(RulerInfo initialInfo)
         {
             try

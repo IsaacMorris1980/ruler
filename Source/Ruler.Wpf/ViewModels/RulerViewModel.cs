@@ -1,5 +1,6 @@
 ﻿using Ruler.Wpf;
 using Ruler.Wpf.Common;
+using Ruler.Wpf.Enums;
 using Ruler.Wpf.Models;
 using Ruler.Wpf.Services;
 using Ruler.Wpf.Services.Persistence;
@@ -26,61 +27,18 @@ namespace Ruler.Wpf.ViewModels
         private RulerInfo _rulerInfo;
         private IDialogService _dialogService;
         private ILoggingService _loggingService;
+        private Point _displaylocation=new Point(0,0);
 
-        // Collections for the ItemsControls to bind to
-        private ObservableCollection<RulerTick> _topRulerTicks = new ObservableCollection<RulerTick>();
-        private ObservableCollection<RulerTick> _bottomRulerTicks = new ObservableCollection<RulerTick>();
-        //Opacity boolean flags
-        private bool _isOpacity5Percent;
-        private bool _isOpacity10Percent;
-        private bool _isOpacity15Percent;
-        private bool _isOpacity20Percent;
-        private bool _isOpacity25Percent;
-        private bool _isOpacity30Percent;
-        private bool _isOpacity35Percent;
-        private bool _isOpacity40Percent;
-        private bool _isOpacity45Percent;
-        private bool _isOpacity50Percent;
-        private bool _isOpacity55Percent;
-        private bool _isOpacity60Percent;
-        private bool _isOpacity65Percent;
-        private bool _isOpacity70Percent;
-        private bool _isOpacity75Percent;
-        private bool _isOpacity80Percent;
-        private bool _isOpacity85Percent;
-        private bool _isOpacity90Percent;
-        private bool _isOpacity95Percent;
-        private bool _isOpacity100Percent;
+   
+    
 
-        private bool _isInitialized = false;
-        // Scle factor flags
-        private bool _isAutoScaled;
-        private bool _is25PercentScaled;
-        private bool _is33PercentScaled;
-        private bool _is50PercentScaled;
-        private bool _is67PercentScaled;
-        private bool _is75PercentScaled;
-        private bool _is80PercentScaled;
-        private bool _is90PercentScaled;
-        private bool _is100PercentScaled;
-        private bool _is110PercentScaled;
-        private bool _is125PercentScaled;
-        private bool _is150PercentScaled;
-        private bool _is175PercentScaled;
-        private bool _is200PercentScaled;
-        private bool _is250PercentScaled;
-        private bool _is300PercentScaled;
-        private bool _is400PercentScaled;
-        private bool _is500PercentScaled;
-        private Dictionary<int, Action<bool>> _opacitySetterMap;
-        private Dictionary<SaveTypes, Action<bool>> _saveTypeSetterMap;
+        private bool _isInitialized = false; 
+       
 
-        //SaveType boolean flags
-        private bool _isSaveTypeNone;
-        private bool _isSaveTypeSize;
-        private bool _isSaveTypeLocation;
-        private bool _isSaveTypeAll;
-
+        public ObservableCollection<UnitOption> UnitsOptions { get; set; }
+         public ObservableCollection<SaveOption> SaveTypesOptions { get; set; }
+        public ObservableCollection<OpacityOption> OpacityOptions { get; set; }
+        public ObservableCollection<ScaleOption> ScaleOptions { get; set; }
 
         private ICommand _toggleLockCommand;
         private ICommand _exitCommand;
@@ -94,321 +52,15 @@ namespace Ruler.Wpf.ViewModels
         private ICommand _duplicateCommand;
         private ICommand _resetToDefaultCommand;
         private ICommand _manualScaleCommand;
-        private ICommand _autoScaleCommand;
+        private ICommand _setScaleCommand;
+        private ICommand _setUnitCommand;
+
 
         private int _horizontalMinHeight = 85;
         private int _vericalMinWidth = 93;
 
-        #region  SaveTypeBooleans
-        public bool IsSaveTypeNone
-        {
-            get => _isSaveTypeNone;
-            set
-            {
-                if (_isSaveTypeNone != value)
-                {
-                    _isSaveTypeNone = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsSaveTypeSize
-        {
-            get => _isSaveTypeSize;
-            set
-            {
-                if (_isSaveTypeSize != value)
-                {
-                    _isSaveTypeSize = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsSaveTypeLocation
-        {
-            get => _isSaveTypeLocation;
-            set
-            {
-                if (_isSaveTypeLocation != value)
-                {
-                    _isSaveTypeLocation = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsSaveTypeAll
-        {
-            get => _isSaveTypeAll;
-            set
-            {
-                if (_isSaveTypeAll != value)
-                {
-                    _isSaveTypeAll = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        #endregion
-        #region OpacityBooleans
-        public bool IsOpacity5Percent
-        {
-            get => _isOpacity5Percent;
-            set
-            {
-                if (_isOpacity5Percent != value)
-                {
-                    _isOpacity5Percent = value; 
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity10Percent
-        {
-            get => _isOpacity10Percent;
-            set
-            {
-                if (_isOpacity10Percent != value)
-                {
-                    _isOpacity10Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity15Percent
-        {
-            get => _isOpacity15Percent;
-            set
-            {
-                if (_isOpacity15Percent != value)
-                {
-                    _isOpacity15Percent = value;   
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity20Percent
-        {
-            get => _isOpacity20Percent;
-            set
-            {
-                if (_isOpacity20Percent != value)
-                {
-                    _isOpacity20Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity25Percent
-        {
-            get => _isOpacity25Percent;
-            set
-            {
-                if (_isOpacity25Percent != value)
-                {
-                    _isOpacity25Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity30Percent
-        {
-            get => _isOpacity30Percent;
-            set
-            {
-                if (_isOpacity30Percent != value)
-                {
-                    _isOpacity30Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity35Percent
-        {
-            get => _isOpacity35Percent;
-            set
-            {
-                if (_isOpacity35Percent != value)
-                {
-                    _isOpacity35Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity40Percent
-        {
-            get => _isOpacity40Percent;
-            set
-            {
-                if (_isOpacity40Percent != value)
-                {
-                    _isOpacity40Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity45Percent
-        {
-            get => _isOpacity45Percent;
-            set
-            {
-                if (_isOpacity45Percent != value)
-                {
-                    _isOpacity45Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity50Percent
-        {
-            get => _isOpacity50Percent;
-            set
-            {
-                if (_isOpacity50Percent != value)
-                {
-                    _isOpacity50Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity55Percent
-        {
-            get => _isOpacity55Percent;
-            set
-            {
-                if (_isOpacity55Percent != value)
-                {
-                    _isOpacity55Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity60Percent
-        {
-            get => _isOpacity60Percent;
-            set
-            {
-                if (_isOpacity60Percent != value)
-                {
-                    _isOpacity60Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity65Percent
-        {
-            get => _isOpacity65Percent;
-            set
-            {
-                if (_isOpacity65Percent != value)
-                {
-                    _isOpacity65Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity70Percent
-        {
-            get => _isOpacity70Percent;
-            set
-            {
-                if (_isOpacity70Percent != value)
-                {
-                    _isOpacity70Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity75Percent
-        {
-            get => _isOpacity75Percent;
-            set
-            {
-                if (_isOpacity75Percent != value)
-                {
-                    _isOpacity75Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity80Percent
-        {
-            get => _isOpacity80Percent;
-            set
-            {
-                if (_isOpacity80Percent != value)
-                {
-                    _isOpacity80Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity85Percent
-        {
-            get => _isOpacity85Percent;
-            set
-            {
-                if (_isOpacity85Percent != value)
-                {
-                    _isOpacity85Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity90Percent
-        {
-            get => _isOpacity90Percent;
-            set
-            {
-                if (_isOpacity90Percent != value)
-                {
-                    _isOpacity90Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity95Percent
-        {
-            get => _isOpacity95Percent;
-            set
-            {
-                if (_isOpacity95Percent != value)
-                {
-                    _isOpacity95Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public bool IsOpacity100Percent
-        {
-            get => _isOpacity100Percent;
-            set
-            {
-                if (_isOpacity100Percent != value)
-                {
-                    _isOpacity100Percent = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        #endregion
-        #region ScaleBooleans
-        public bool IsAutoScaled
-        {
-            get => _rulerInfo.IsAutoScaled;
-            set
-            {
-                if (_rulerInfo.IsAutoScaled != value)
-                {
-                    _isAutoScaled = value;
-                    _rulerInfo.IsAutoScaled = value;
-                    OnPropertyChanged();
-                    // Ensure manual scale checkmarks are updated when auto scale changes
-                    UpdateScaleFlags();
-                }
-            }
-        }
+       
 
-        #endregion
         // State variables for mouse interaction
         private Point _startPoint;
         private Size _startSize;
@@ -427,182 +79,187 @@ namespace Ruler.Wpf.ViewModels
         private double _minheight = 45;
         private double _minwidth = 40;
         private double _scaleFactor;
-        // --- CONSTANTS EXPOSED FOR VIEW CONVERTER ---
-        public const double UnscaledVerticalHeadTotalThickness = 77.0;
-        public const double UnscaledHorizontalHeadTotalThickness = 82.0;
-        public const double UnscaledVerticalHeadThickness = 38.5;
-        public const double UnscaledHorizontalHeadThickness = 41.0;
-        // ---------------------------------------------
-
-        // --- DPI CONVERSION CONSTANTS (Based on standard WPF 96 DPI) ---
-        private const double StandardDipsPerInch = 96.0;
-        private const double DipsPerCentimeter = StandardDipsPerInch / 2.54;
-        private const double DipsPerMillimeter = DipsPerCentimeter / 10.0;
-
-        // Typographic conversions
-        private const double DipsPerPica = StandardDipsPerInch / 6.0;
-        private const double DipsPerPoint = StandardDipsPerInch / 72.0;
-        // Derived units
-        private const double DipsPerMicrometer = DipsPerMillimeter / 1000.0;
-
-
-
-        public bool IsGuideLineVisible
-        {
-            get => _isGuideLineVisible;
-            set {
-                if (_isGuideLineVisible!=value)
-                {
-                    _isGuideLineVisible = value;   
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Represents the X coordinate (for horizontal ruler) 
-        /// or the Y coordinate (for vertical ruler) of the guide line.
-        /// </summary>
-        public double GuideLinePosition
-        {
-            get => _guideLinePosition;
-            set
-            {
-                if (_guideLinePosition!=value)
-                {
-                    _guideLinePosition = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public ResizeMode WindowResizeMode
-        {
-            get => IsLocked ? ResizeMode.NoResize : ResizeMode.CanResize;
-        }
-        public Color GuideLineColor 
-        {
-            get;
-            set; 
-        } = Colors.Red;
-        public Double ActualWidth
-        {
-            get => actualWidth;
-            set
-            {
-                if (actualWidth != value)
-                {
-                    if (IsVertical)
-                    {
-                        if (value < 110)
-                        {
-                            actualWidth = 110;
-                        }
-                    }
-                    else
-                    { 
-                    actualWidth = value;
-                    }
-                   
-                }
-                OnPropertyChanged();
-            }
-        }
-        public double MiddleWidth
-        {
-            get
-            {
-                if (IsVertical)
-                {                 
-                    return (_minwidth + (Width - 77))*ScaleFactor;
-                }
-                return  (_minheight+( Height - 82)) * ScaleFactor;
-
-            }
-            set
-            {
-                if (_middlewidth != value)
-                {
-                    _middlewidth = value;
-                }
-            }
-        }
-        public ObservableCollection<RulerScale> ScaleOptions { get; }
-        public RulerScale SelectedScale
-        {
-            get => _rulerInfo.SelectedScale;
-            set
-            {
-                if (_rulerInfo.SelectedScale!=value)
-                {
-                    // Recalculate ticks whenever the scale changes
-                  //  SetScale(value);
-                    OnPropertyChanged();
-                    
-                }
-            }
-        }
+        private bool _isOnlySingleRulerVisible = false;
+        private bool _isAutoScaled;
+        #region Constructor
         public RulerViewModel(IDialogService dialogService, RulerInfo initialInfo, SingleRulerPersistenceService persistenceService, ILoggingService loggingService)
         {
             _dialogService = dialogService ?? throw new ArgumentException(nameof(dialogService));
             _persistenceService = persistenceService ?? throw new ArgumentException(nameof(persistenceService));
             _loggingService = loggingService ?? throw new ArgumentException(nameof(loggingService));
-            _rulerInfo = initialInfo ?? throw new ArgumentException(nameof(initialInfo));
-            InitializeCommands();
-            _opacitySetterMap = new Dictionary<int, Action<bool>>()
-            {
-                {5, (val) => { IsOpacity5Percent = val; } },
-                {10, (val) => { IsOpacity10Percent = val; } },
-                {15, (val) => { IsOpacity15Percent = val; } },
-                {20, (val) => { IsOpacity20Percent = val; } },
-                {25, (val) => { IsOpacity25Percent = val; } },
-                {30, (val) => { IsOpacity30Percent = val; } },
-                {35, (val) => { IsOpacity35Percent = val; } },
-                {40, (val) => { IsOpacity40Percent = val; } },
-                {45, (val) => { IsOpacity45Percent = val; } },
-                {50, (val) => { IsOpacity50Percent = val; } },
-                {55, (val) => { IsOpacity55Percent = val; } },
-                {60, (val) => { IsOpacity60Percent = val; } },
-                {65, (val) => { IsOpacity65Percent = val; } },
-                {70, (val) => { IsOpacity70Percent = val; } },
-                {75, (val) => { IsOpacity75Percent = val; } },
-                {80, (val) => { IsOpacity80Percent = val; } },
-                {85, (val) => { IsOpacity85Percent = val; } },
-                {90, (val) => { IsOpacity90Percent = val; } },
-                {95, (val) => { IsOpacity95Percent = val; } },
-                {100, (val) => { IsOpacity100Percent = val; } }
-            };
-            _saveTypeSetterMap = new Dictionary<SaveTypes, Action<bool>>()
-            {
-                {SaveTypes.none, (val) => { IsSaveTypeNone = val; } },
-                {SaveTypes.size, (val) => { IsSaveTypeSize = val; } },
-                {SaveTypes.location, (val) => { IsSaveTypeLocation = val; } },
-                {SaveTypes.all, (val) => { IsSaveTypeAll = val; } }
-            };
-            CheckSingleRuler();
-            if (IsVertical)
-            {
+            _rulerInfo = initialInfo ?? throw new ArgumentException(nameof(initialInfo));            
+            InitializeCommands();                    
+            InitializeUnits();
+            InitializeOpacities();
+            InitializeScales();
+            InitializeSaveTypes();
+            _rulerInfo.PropertyChanged += OnRulerInfoPropertyChanged;
+        }
+        #endregion
+        #region Properties
+        public bool IsGuideLineVisible
+        {
+            get => _isGuideLineVisible;
+            set => _isGuideLineVisible = value;
+        }
+        public double GuideLinePosition
+        {
+            get => _guideLinePosition;
+            set => _guideLinePosition = value;
+        }
+        public ResizeMode WindowResizeMode
+        {
+            get => IsLocked ? ResizeMode.NoResize : ResizeMode.CanResize;
+        }
+        public Color GuideLineColor
+        {
+            get;
+            set;
+        } = Colors.Red;
+        public SaveTypes CurrentSaveType
+        {
+            get => _rulerInfo.SaveType;
+            set => _rulerInfo.SaveType = value;
 
-                GenerateVerticalTicks(Height);
-            }
-            else
+        }
+        public MeasurementUnit CurrentUnit
+        {
+            get => _rulerInfo.CurrentUnit;
+            set => _rulerInfo.CurrentUnit = value;
+        }
+        // Property for the ruler's width, with change notification
+        public double Width
+        {
+            get => _rulerInfo.Width;
+            set => _rulerInfo.Width = value;
+        }
+        // Property for the ruler's height, with change notification
+        public double Height
+        {
+            get => _rulerInfo.Height;
+            set => _rulerInfo.Height = value;
+        }
+        public double Left
+        {
+            get => _rulerInfo.Left;
+            set => _rulerInfo.Left = value;
+        }
+        public double Top
+        {
+            get => _rulerInfo.Top;
+            set => _rulerInfo.Top = value;
+        }
+        // Property for the ruler's location, with change notification
+        public Point DisplayedLocation
+        {
+            get => _displaylocation;
+            set => _displaylocation = value;
+        }
+        // Property for the lock state, with change notification
+        public bool IsLocked
+        {
+            get => _rulerInfo.IsLocked;
+            set => _rulerInfo.IsLocked = value;
+        }
+        // Property for opacity, with change notification
+        public double Opacity
+        {
+            get => _rulerInfo.Opacity;
+            set => _rulerInfo.Opacity = value;
+        }
+        // Property for the TopMost state
+        public bool TopMost
+        {
+            get => _rulerInfo.TopMost;
+            set => _rulerInfo.TopMost = value;
+        }
+        // Property for the vertical state
+        public bool IsVertical
+        {
+            get => _rulerInfo.IsVertical;
+            set => _rulerInfo.IsVertical = value;
+        }
+        // Property for the tooltip state
+        public bool ShowToolTip
+        {
+            get => _rulerInfo.ShowToolTip;
+            set => _rulerInfo.ShowToolTip = value;
+        }
+        // Property for the save type
+        public SaveTypes SaveType
+        {
+            get => _rulerInfo.SaveType;
+            set => _rulerInfo.SaveType = value;
+        }
+        #endregion
+        #region Initialization and Update Methods
+        private void InitializeUnits()
+        {
+            UnitsOptions = new ObservableCollection<UnitOption>
             {
+                // Ensures the Unit property is set
+                new UnitOption { Label = "Inches", Unit = MeasurementUnit.Inches, Value = (int)MeasurementUnit.Inches },
+                new UnitOption { Label = "Millimeters", Unit = MeasurementUnit.Millimeters, Value = (int)MeasurementUnit.Millimeters },
+                new UnitOption { Label = "Centimeters", Unit = MeasurementUnit.Centimeters, Value = (int)MeasurementUnit.Centimeters },
+                new UnitOption { Label = "Pixels", Unit = MeasurementUnit.Pixels, Value = (int)MeasurementUnit.Pixels },
+                new UnitOption { Label = "Points", Unit = MeasurementUnit.Points, Value = (int)MeasurementUnit.Points }
+            };
 
-                GenerateHorizontalTicks(Width);
-            }
-            SetOpacityFlags(_rulerInfo.Opacity);
-            SetSaveTypeFlags(_rulerInfo.SaveType);
+            // Set the initially selected unit based on the model
+            UpdateUnitSelection(_rulerInfo.CurrentUnit);
         }
 
-        public void CheckSingleRuler()
+        private void InitializeOpacities()
         {
-            if (IsVertical)
+            // Placeholder: Populate Opacities collection here for future refactor
+            OpacityOptions = new ObservableCollection<OpacityOption>();
+            for (int i = 5; i <= 100; i += 5)
             {
-                _isOnlySingleRulerVisible = Width < _vericalMinWidth;
+                OpacityOptions.Add(new OpacityOption
+                {
+                    Label = $"{i}%",
+                    Value = i / 100.0,
+                    IsSelected = (i / 100.0) == _rulerInfo.Opacity
+
+                });
             }
-            else
+            UpdateOpacitySelection(_rulerInfo.Opacity);
+        }
+
+        private void InitializeScales()
+        {
+            // Placeholder: Populate Scales collection here for future refactor
+            ScaleOptions = new ObservableCollection<ScaleOption>();
+            double[] manualScales = new double[]
+        {
+                0.0,0.25,0.33,0.50,0.67,0.75,0.80,0.90,1.00,1.10,1.25,1.50,1.75,2.00,2.50,3.00,4.00,5.00
+        };
+            foreach (var scale in manualScales)
             {
-                _isOnlySingleRulerVisible = Height < _horizontalMinHeight;
+                ScaleOptions.Add(new ScaleOption
+                {
+                    Label = scale == 0.0 ? "Auto" : $"{scale * 100}%",
+                    Value = scale,
+                    IsSelected = scale == ScaleFactor
+                });
             }
+            UpdateScaleSelection(_rulerInfo.ScaleFactor);
+        }
+  
+        private void InitializeSaveTypes()
+        {
+            SaveTypesOptions = new ObservableCollection<SaveOption>
+            {
+                // Using the strong-typed SaveType property
+                new SaveOption { Label = "Size Only", SaveType = SaveTypes.size, Value = (double)SaveTypes.size },
+                new SaveOption { Label = "Location Only", SaveType = SaveTypes.location, Value = (double)SaveTypes.location },
+                new SaveOption { Label = "No Settings", SaveType = SaveTypes.none, Value = (double)SaveTypes.none },
+                new SaveOption { Label = "All Settings", SaveType = SaveTypes.all, Value = (double)SaveTypes.all }
+            };
+
+            // Set the default selection (e.g., AllSettings)
+            SaveType = SaveTypes.none;
+            UpdateSaveTypeSelection(CurrentSaveType);
         }
         public void InitializeCommands()
         {
@@ -616,90 +273,182 @@ namespace Ruler.Wpf.ViewModels
             _setOpacityCommand = new RelayCommand(SetOpacity);
             _setSaveTypeCommand = new RelayCommand(SetSaveType);
             _showAboutCommand = new RelayCommand(NavigateAbout);
-            _duplicateCommand = new RelayCommand(DuplicateRuler);
-            _autoScaleCommand = new RelayCommand(ExecuteToggleAutoScaleCommand);
-            _manualScaleCommand = new RelayCommand(ExecuteManualScaleCommand);
+            _duplicateCommand = new RelayCommand(DuplicateRuler);            
+            _setScaleCommand = new RelayCommand(SetScaleCommand);
+            _setUnitCommand = new RelayCommand(SetMeasurementUnit);
         }
-        private void ExecuteManualScaleCommand(object parameter)
+        internal void SetInitialState(RulerInfo initialInfo)
         {
-            if (parameter is string scaleString && double.TryParse(scaleString, out double scalePercent))
-            {
-                // 1. Disable auto-scaling
-                IsAutoScaled = false;
+            _isLoadingState = true;
 
-                // 2. Set the manual scale factor
-                // Convert percentage (e.g., 125) to factor (e.g., 1.25)
-                ScaleFactor = scalePercent / 100.0;
-            }
-        }
+            // 1. Set all non-dimension/non-orientation properties directly on the model
+            _rulerInfo.Opacity = initialInfo.Opacity;
+            _rulerInfo.ShowToolTip = initialInfo.ShowToolTip;
+            _rulerInfo.IsLocked = initialInfo.IsLocked;
+            _rulerInfo.TopMost = initialInfo.TopMost;
+            _rulerInfo.Top = initialInfo.Top    ;
+            _rulerInfo.Left = initialInfo.Left;
+            _rulerInfo.SaveType = initialInfo.SaveType;
 
-        private void ExecuteToggleAutoScaleCommand(object parameter)
-        {
-            // The command only toggles the mode. The MainWindow.xaml.cs will observe 
-            // the change and call SetAutoScaleFactor with the actual system DPI value.
-            if (!IsAutoScaled)
+
+            // 2. IMPORTANT: Set IsVertical first for reconciliation
+            _rulerInfo.IsVertical = initialInfo.IsVertical;
+
+
+            // 3. Reconciliation Logic for Width and Height based on IsVertical
+            double w = initialInfo.Width;
+            double h = initialInfo.Height;
+
+            // Determine if the saved dimensions are 'horizontal' (width >= height)
+            bool savedHorizontal = w >= h;
+
+            // If the saved orientation clashes with the saved dimensions, swap them.
+            if ((_rulerInfo.IsVertical && savedHorizontal) || (!_rulerInfo.IsVertical && !savedHorizontal))
             {
-                IsAutoScaled = true;
+                // Swap dimensions in the model to match the orientation
+                _rulerInfo.Width = h;
+                _rulerInfo.Height = w;
             }
             else
             {
-                // If it's already autoscaled, toggle it back to default manual 100%
-                IsAutoScaled = false;
-                ScaleFactor = 1.0;
+                // Dimensions are already correctly oriented
+                _rulerInfo.Width = w;
+                _rulerInfo.Height = h;
             }
-            UpdateScaleFlags();
+            // 5. Trigger UI updates for all properties
+            // We use OnPropertyChanged for all properties to ensure the UI updates correctly from the reconciled model state.
+            OnPropertyChanged(nameof(Width));
+            OnPropertyChanged(nameof(Height));
+            OnPropertyChanged(nameof(IsVertical));
+            OnPropertyChanged(nameof(Opacity));
+            OnPropertyChanged(nameof(ShowToolTip));
+            OnPropertyChanged(nameof(IsLocked));
+            OnPropertyChanged(nameof(TopMost));
+            OnPropertyChanged(nameof(Top));
+            OnPropertyChanged(nameof(Left));
+            OnPropertyChanged(nameof(DisplayedLocation));
+            OnPropertyChanged(nameof(SaveType));
+            OnPropertyChanged(nameof(RulerMeasurementsText));
+            OnPropertyChanged(nameof(ScaleFactor));
+            OnPropertyChanged(nameof(IsAutoScaled));
+            // 6. Reset flag after loading is complete
+            _isLoadingState = false;
+
         }
-        public bool IsScaleAuto => IsAutoScaled;
-        public bool IsScale25Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.25) < 0.001;
-        public bool IsScale33Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.33) < 0.001;
-        public bool IsScale50Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.50) < 0.001;
-        public bool IsScale67Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.67) < 0.001;
-        public bool IsScale75Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.75) < 0.001;
-        public bool IsScale80Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.80) < 0.001;
-        public bool IsScale90Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 0.90) < 0.001;
-        public bool IsScale100Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.00) < 0.001;
-        public bool IsScale110Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.10) < 0.001;
-        public bool IsScale125Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.25) < 0.001;
-        public bool IsScale150Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.50) < 0.001;
-        public bool IsScale175Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 1.75) < 0.001;
-        public bool IsScale200Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 2.00) < 0.001;
-        public bool IsScale250Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 2.50) < 0.001;
-        public bool IsScale300Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 3.00) < 0.001;
-        public bool IsScale400Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 4.00) < 0.001;
-        public bool IsScale500Percent => !IsAutoScaled && Math.Abs(ScaleFactor - 5.00) < 0.001;
-
-
-        public void SetOpacityFlags(double opacity)
+        private void UpdateUnitSelection(MeasurementUnit selectedUnit)
         {
-            int percentage = (int)Math.Round((opacity * 100));
-            foreach (var sets in _opacitySetterMap.Values)
+            foreach (var unit in UnitsOptions)
             {
-                sets.Invoke(false);
-            }
-            if (_opacitySetterMap.TryGetValue(percentage, out Action<bool> setter))
-            {
-                setter.Invoke(true);
+                // Ensures type-safe comparison using the Unit property
+               if (unit.Unit == selectedUnit)
+                {
+                    unit.IsSelected = true;
+                    CurrentUnit = selectedUnit;
+                }
+                else
+                {
+                    unit.IsSelected = false;
+                }
             }
         }
-        public void SetSaveTypeFlags(SaveTypes saveType)
+        private void UpdateSaveTypeSelection(SaveTypes selectedType)
         {
-
-            foreach (var sets in _saveTypeSetterMap.Values)
+            foreach (var option in SaveTypesOptions)
             {
-                sets.Invoke(false);
-            }
-            if (_saveTypeSetterMap.TryGetValue(saveType, out Action<bool> setter))
-            {
-                setter.Invoke(true);
+                // Ensures only the selected item is marked as checked (mutually exclusive)
+                // Now uses the strongly-typed SaveType property for comparison
+                if (option.SaveType == selectedType)
+                {
+                    option.IsSelected = true;
+                    SaveType = selectedType;
+                   
+                }
+                else
+                {
+                    option.IsSelected = false;
+                }
             }
         }
+        public void UpdateOpacitySelection(double selectedOpacity)
+        {
+            foreach (var option in OpacityOptions)
+            {
+                if (option.Value==selectedOpacity)
+                {
+                    option.IsSelected = true;
+                    Opacity = selectedOpacity;
+                }
+                else
+                {
+                    option.IsSelected = false;
+                }
+            }
+        }
+        public void UpdateScaleSelection(double selectedScale)
+        {
+            foreach (var option in ScaleOptions)
+            {
+                if (option.Value==selectedScale)
+                {
+                    if (selectedScale == 0.0)
+                    {
+                        IsAutoScaled = true;
+                    }
+                    else
+                    {
+                        IsAutoScaled = false;
+                    }
+                    option.IsSelected = true;
+                    ScaleFactor = selectedScale;                   
+                }
+                else
+                {
+                    option.IsSelected = false; 
+                }
+            }
+        }
+        #endregion
+        #region Event Handlers and Command Logic
+        private void OnRulerInfoPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            // 1. Re-notify the View for the property that changed on the Model.
+            OnPropertyChanged(e.PropertyName);
 
+            // 2. Critical: If the Opacity changed, update all the menu item flags
+            if (e.PropertyName == nameof(Opacity))
+            {
+                UpdateOpacitySelection(_rulerInfo.Opacity);
+            }
+            if (e.PropertyName == nameof(CurrentUnit))
+            {
+                UpdateUnitSelection(_rulerInfo.CurrentUnit);
+            }
+            if (e.PropertyName == nameof(SaveType))
+            {
+                UpdateSaveTypeSelection(_rulerInfo.SaveType);
+            }
+            if (e.PropertyName == nameof(ScaleFactor))
+            {
+                UpdateScaleSelection(_rulerInfo.ScaleFactor);
+            }
+
+            // 3. Notify computed properties
+            OnPropertyChanged(nameof(RulerMeasurementsText));              
+        }        
+       
+        private void SetScaleCommand(object parameter)
+        {
+            if (parameter is ScaleOption option)
+            {
+                UpdateScaleSelection(option.Value);
+            }           
+        }
+       
         private void GetNavigateSetSizeForm(object parameters)
         {
             var s = _dialogService.ShowSetSizeDialog(this.Width, this.Height);
             SetRulerDimensions(s.Width, s.Height);
         }
-
         private void DuplicateRuler(object parameters)
         {
             RulerInfo ri = new RulerInfo();
@@ -707,268 +456,90 @@ namespace Ruler.Wpf.ViewModels
             RulerInfo.CopyInto(_rulerInfo, ri);
             _dialogService.ShowNewRuler(ri);
         }
-
-        public ObservableCollection<RulerTick> TopRulerTicks
+        // Logic for the ToggleLockCommand
+        private void ToggleLock(object parameter)
         {
-            get => _topRulerTicks;
-            set
+            IsLocked = !IsLocked;
+        }
+        public void ResetDefault(object parameter)
+        {
+            RulerInfo defaultRuler = RulerInfo.GetDefaultRulerInfo();
+            _isLoadingState = true;
+            RulerInfo.CopyInto(defaultRuler, _rulerInfo);
+            _isLoadingState = false;
+        }
+        private void ExitApplication(object parameter)
+        {
+            if (parameter is Window windowToClose)
             {
-                if (_topRulerTicks != value)
+                _persistenceService.SaveRulerState(_rulerInfo);
+                bool isLastRuler = _dialogService.OpenRulers.Count() == 1;
+                windowToClose.Close();
+                if (isLastRuler)
                 {
-                    _topRulerTicks = value;
-                    OnPropertyChanged(nameof(TopRulerTicks));
+                    Application.Current.Shutdown();
                 }
             }
         }
-
-        public ObservableCollection<RulerTick> BottomRulerTicks
+        // Logic for the ToggleVerticalCommand
+        private void ToggleVertical(object parameter)
         {
-            get => _bottomRulerTicks;
-            set
+            IsVertical = !IsVertical;
+            double oldWidth = Width;
+            double oldHeight = Height;
+            SetRulerDimensions(oldHeight, oldWidth);
+        }
+        // Logic for the ToggleTopMostCommand
+        private void ToggleTopMost(object parameter)
+        {
+            TopMost = !TopMost;
+        }
+        // Logic for the ToggleToolTipCommand
+        private void ToggleToolTip(object parameter)
+        {
+            ShowToolTip = !ShowToolTip;
+        }
+        // Logic for the SetOpacityCommand
+        private void SetOpacity(object parameter)
+        {
+           if (parameter is OpacityOption option)
             {
-                if (_bottomRulerTicks != value)
-                {
-                    _bottomRulerTicks = value;
-                    OnPropertyChanged(nameof(BottomRulerTicks));
-                }
-
+                UpdateOpacitySelection(option.Value);
             }
         }
-        public ObservableCollection<RulerTick> LeftRulerTicks
+        // Logic for the SetSaveTypeCommand
+        private void SetSaveType(object parameter)
         {
-            get => _topRulerTicks;
-            set
+            if (parameter is SaveOption option)
             {
-                if (_topRulerTicks != value)
-                {
-                    _topRulerTicks = value;
-                    OnPropertyChanged();
-                }
+                UpdateSaveTypeSelection(option.SaveType);
             }
         }
-
-        public ObservableCollection<RulerTick> RightRulerTicks
+        private void SetMeasurementUnit(object parameter)
         {
-            get => _bottomRulerTicks;
-            set
+            if (parameter is UnitOption unit)
             {
-                if (_bottomRulerTicks != value)
-                {
-                    _bottomRulerTicks = value;
-                    OnPropertyChanged();
-                }
+                UpdateUnitSelection(unit.Unit);
             }
+          
         }
-        // Property for the ruler's width, with change notification
-        public double Width
+        private void NavigateAbout(object parameter)
         {
-            get => _rulerInfo.Width;
-            set
-            {
-                if (_rulerInfo.Width != value)
-                {
-                    _rulerInfo.Width = value;                   
-                    CheckSingleRuler();
-                    if (IsVertical)
-                    {
-                        GenerateVerticalTicks(Height);
-                        OnPropertyChanged();
-                        OnPropertyChanged(nameof(MiddleWidth));
-                    }
-                    else
-                    {
-                        GenerateHorizontalTicks(Width);
-                        OnPropertyChanged();
-                        OnPropertyChanged(nameof(MiddleWidth));
-                    }                    
-                }
-            }
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            Version version = assembly.GetName().Version;
+            string message = string.Format(
+                "Original Ruler implemented by Jeff Key\n" +
+                "www.sliver.com\n" +
+                "ruler.codeplex.com\n" +
+                "Icon by Kristen Magee @ www.kbecca.com.\n" +
+                "Maintained by Andrija Cacanovic\n" +
+                "Hosted on \n" +
+                "https://github.com/andrijac/ruler\n" +
+                "Version {0}",
+                $"{version.Major}.{version.Minor}.{version.Build}.{version.MajorRevision}");
+            MessageBox.Show(message, "About Ruler", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-        // Property for the ruler's height, with change notification
-        public double Height
-        {
-            get => _rulerInfo.Height;
-            set
-            {
-                // 1. Check the state flag to bypass logic during reset/load
-                if (_rulerInfo.Height != value)
-                {
-                    if (!_isLoadingState)
-                    {
-                        if (IsVertical)
-                        {
-                            // If vertical, Height is the measurement dimension (enforce minimum 75)
-                            value = Math.Max(value, 75);
-                            _rulerInfo.Height = value;
-                        }
-                        else
-                        {
-                            // If horizontal, enforce a reasonable minimum for the ruler thickness (75)
-                            // (I'm changing this from 120 to 75 to match the default)
-                            value = Math.Max(value, 75);
-                            _rulerInfo.Height = value;
-                        }
-                    }
-
-                    _rulerInfo.Height = value;
-
-                    // 2. Suppress side effects if loading state
-                    if (!_isLoadingState)
-                    {
-                        CheckSingleRuler();
-                        if (IsVertical)
-                        {
-                            GenerateVerticalTicks(Height);
-                        }
-                        else
-                        {
-                            GenerateHorizontalTicks(Width);
-                        }
-                    }
-
-                    // Always notify the change after setting the value
-                    OnPropertyChanged(); // Notifies change for 'Height'
-                    OnPropertyChanged(nameof(MiddleWidth));
-                }
-            }
-        }
-        public double LocationX
-        {
-            get => _rulerInfo.LocationX;
-            set
-            {
-                if (_rulerInfo.LocationX != value)
-                {
-                    _rulerInfo.LocationX = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public double LocationY
-        {
-            get => _rulerInfo.LocationY;
-            set
-            {
-                if (_rulerInfo.LocationY != value)
-                {
-                    _rulerInfo.LocationY = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        // Property for the ruler's location, with change notification
-        public Point DisplayedLocation
-        {
-            get => new Point(LocationX, LocationY);
-            set
-            {
-                if (_rulerInfo.DisplayedLocation != value)
-                {
-                    _rulerInfo.DisplayedLocation = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        // Property for the lock state, with change notification
-        public bool IsLocked
-        {
-            get => _rulerInfo.IsLocked;
-            set
-            {
-                if (_rulerInfo.IsLocked != value)
-                {
-                    _rulerInfo.IsLocked = value;
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(WindowResizeMode));
-                }
-            }
-        }
-
-        // Property for opacity, with change notification
-        public double Opacity
-        {
-            get => _rulerInfo.Opacity;
-            set
-            {
-                if (_rulerInfo.Opacity != value)
-                {
-                    _rulerInfo.Opacity = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        // Property for the TopMost state
-        public bool TopMost
-        {
-            get => _rulerInfo.TopMost;
-            set
-            {
-                if (_rulerInfo.TopMost != value)
-                {
-                    _rulerInfo.TopMost = value;
-                    OnPropertyChanged(nameof(TopMost));
-                }
-            }
-        }
-
-        // Property for the vertical state
-        public bool IsVertical
-        {
-            get => _rulerInfo.IsVertical;
-            set
-            {
-                if (_rulerInfo.IsVertical != value)
-                {
-                   _rulerInfo.IsVertical = value;
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(MiddleWidth));
-                }
-            }
-        }
-
-        // Property for the tooltip state
-        public bool ShowToolTip
-        {
-            get => _rulerInfo.ShowToolTip;
-            set
-            {
-                if (_rulerInfo.ShowToolTip != value)
-                {
-                    _rulerInfo.ShowToolTip = value;
-                    OnPropertyChanged(nameof(ShowToolTip));
-                    OnPropertyChanged(nameof(IsToolTipVisible));
-                }
-            }
-        }
-
-        // Property for the save type
-        public SaveTypes SaveType
-        {
-            get => _rulerInfo.SaveType;
-            set
-            {
-                if (_rulerInfo.SaveType != value)
-                {
-                    _rulerInfo.SaveType = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-      
-        
-    
-        // Determines the height of the top/bottom rows (0 when vertical, 25 when horizontal)
-        public double TopRowHeight => _rulerInfo.IsVertical ? 0 : 25;
-        public double BottomRowHeight => _rulerInfo.IsVertical ? 0 : 25;
-
-        // Determines the width of the left/right columns (25 when vertical, 0 when horizontal)
-        public double TopColumnWidth => _rulerInfo.IsVertical ? 25 : 0;
-        public double BottomColumnWidth => _rulerInfo.IsVertical ? 25 : 0;       
+        #endregion
         public void SetRulerDimensions(double newWidth, double newHeight)
         {
             if (this.Width == newWidth && this.Height == newHeight)
@@ -976,23 +547,12 @@ namespace Ruler.Wpf.ViewModels
                 return;
             }
             Width = newWidth;
-            Height = newHeight;
-            if (IsVertical)
-            {
-                this.actualWidth = Width;
-                GenerateVerticalTicks(Height);
-            }
-            else
-            {
-                GenerateHorizontalTicks(Width);
-            }
-            OnPropertyChanged(nameof(TopRulerTicks));
-            OnPropertyChanged(nameof(BottomRulerTicks));
+            Height = newHeight;           
         }
         public void UpdateLocation(double left, double top)
         {
-            LocationX = left;
-            LocationY = top;
+          Left = left;
+            Top = top;
         }
         public bool IsInitialized
         {
@@ -1027,83 +587,51 @@ namespace Ruler.Wpf.ViewModels
         public ICommand DuplicateCommand => _duplicateCommand;
         public ICommand ResetToDefaultCommand => _resetToDefaultCommand;
         public ICommand ManualScaleCommand => _manualScaleCommand;
-        public ICommand AutoScaleCommand => _autoScaleCommand;
-      
+        public ICommand ScaleCommand => _setScaleCommand;
+        public ICommand SetUnitCommand => _setUnitCommand;
 
-        // Logic for the ToggleLockCommand
-        private void ToggleLock(object parameter)
-        {
-            IsLocked = !IsLocked;
-        }
-        public void ResetDefault(object parameter)
-        {
-            RulerInfo defaultRuler = RulerInfo.GetDefaultRulerInfo();
-            _isLoadingState = true;
-            Console.WriteLine("Current Ruler Information:");
-            Console.WriteLine($"Width: {_rulerInfo.Width}, Height: {_rulerInfo.Height}, IsVertical: {_rulerInfo.IsVertical}, Opacity: {_rulerInfo.Opacity}, ShowToolTip: {_rulerInfo.ShowToolTip}, IsLocked: {_rulerInfo.IsLocked}, TopMost: {_rulerInfo.TopMost}, LocationX: {_rulerInfo.LocationX}, LocationY: {_rulerInfo.LocationY}, SaveType: {_rulerInfo.SaveType}");
-            _rulerInfo.IsVertical = defaultRuler.IsVertical;
-            //  RulerInfo.CopyInto(defaultRuler, _rulerInfo);
-            IsVertical = defaultRuler.IsVertical;
-            Height = defaultRuler.Height;
-            Width = defaultRuler.Width;
-            Opacity = defaultRuler.Opacity;
-            ShowToolTip = defaultRuler.ShowToolTip;
-            IsLocked = defaultRuler.IsLocked;
-            TopMost = defaultRuler.TopMost;
-            LocationX = defaultRuler.LocationX;
-            LocationY = defaultRuler.LocationY;
-            SaveType = defaultRuler.SaveType;
-            _scaleFactor = _rulerInfo.ScaleFactor;
-            _isAutoScaled = _rulerInfo.IsAutoScaled;
 
-            _isLoadingState = false;    
-            Console.WriteLine("Reset to default called.");
-            Console.WriteLine($"Width: {_rulerInfo.Width}, Height: {_rulerInfo.Height}, IsVertical: {_rulerInfo.IsVertical}, Opacity: {_rulerInfo.Opacity}, ShowToolTip: {_rulerInfo.ShowToolTip}, IsLocked: {_rulerInfo.IsLocked}, TopMost: {_rulerInfo.TopMost}, LocationX: {_rulerInfo.LocationX}, LocationY: {_rulerInfo.LocationY}, SaveType: {_rulerInfo.SaveType}");
-            //RulerInfo.CopyInto(defaultRuler, _rulerInfo);
-            OnPropertyChanged(nameof(IsVertical));
-            Console.WriteLine($"Vertical was set: {IsVertical}");
-            OnPropertyChanged(nameof(Height));
-            Console.WriteLine($"Height was set: {Height}"); 
-
-            OnPropertyChanged(nameof(Width));
-            Console.WriteLine($"Width was set: {Width}");
-            OnPropertyChanged(nameof(Opacity));
-            Console.WriteLine($"Opacity was set: {Opacity}");
-            OnPropertyChanged(nameof(ShowToolTip));
-            Console.WriteLine($"ShowToolTip was set: {ShowToolTip}");
-            OnPropertyChanged(nameof(IsLocked));
-            Console.WriteLine($"IsLocked was set: {IsLocked}");
-            OnPropertyChanged(nameof(TopMost));
-            Console.WriteLine($"TopMost was set: {TopMost}");
-            OnPropertyChanged(nameof(LocationX));
-            Console.WriteLine($"LocationX was set: {LocationX}");
-            OnPropertyChanged(nameof(LocationY));
-            Console.WriteLine($"LocationY was set: {LocationX}");
-            OnPropertyChanged(nameof(SaveType));
-            Console.WriteLine($"SaveType was set: {SaveType}");
-        }
-      
-       
         public void UpdateScaleFlags()
         {
-            OnPropertyChanged(nameof(IsScaleAuto));
-            OnPropertyChanged(nameof(IsScale25Percent));
-            OnPropertyChanged(nameof(IsScale33Percent));
-            OnPropertyChanged(nameof(IsScale50Percent));
-            OnPropertyChanged(nameof(IsScale67Percent));
-            OnPropertyChanged(nameof(IsScale75Percent));
-            OnPropertyChanged(nameof(IsScale80Percent));
-            OnPropertyChanged(nameof(IsScale90Percent));
-            OnPropertyChanged(nameof(IsScale100Percent));
-            OnPropertyChanged(nameof(IsScale110Percent));
-            OnPropertyChanged(nameof(IsScale125Percent));
-            OnPropertyChanged(nameof(IsScale150Percent));
-            OnPropertyChanged(nameof(IsScale175Percent));
-            OnPropertyChanged(nameof(IsScale200Percent));
-            OnPropertyChanged(nameof(IsScale250Percent));
-            OnPropertyChanged(nameof(IsScale300Percent));
-            OnPropertyChanged(nameof(IsScale400Percent));
-            OnPropertyChanged(nameof(IsScale500Percent));
+           foreach (var option in ScaleOptions)
+            {
+                option.IsSelected = option.Value == ScaleFactor;
+            }
+        }
+        public void SetScaleFactorCommand(object parameter)
+        {
+            if (parameter != null && parameter is ScaleOption scales)
+            {
+
+
+                foreach (var option in ScaleOptions)
+                {
+                    if (option.Value == 0.0)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            IsAutoScaled = true;
+                        });
+                        ScaleFactor = option.Value;
+                        break;
+                    }
+                    else if (option.Value == scales.Value)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            IsAutoScaled = false;
+                        });
+                        ScaleFactor = option.Value;
+                        break;
+                    }
+                }
+            }
+           
+            UpdateScaleFlags();
+        }
+       public Orientation RulerOrientation
+        {
+            get => IsVertical ? Orientation.Vertical : Orientation.Horizontal;
         }
         public double ScaleFactor
         {
@@ -1111,13 +639,9 @@ namespace Ruler.Wpf.ViewModels
             set
             {
                 if (_rulerInfo.ScaleFactor!= value)
-                {
-                    _scaleFactor = value;
-                    _rulerInfo.ScaleFactor = value;
-                    OnPropertyChanged();
-                    // Call the method that recalculates and draws the ruler ticks based on the new scale
-                   GenerateRulerTicks(IsVertical ? Height : Width);
-                    UpdateScaleFlags();
+                {                    
+                    _rulerInfo.ScaleFactor = value;                  
+                    
                 }
             }
         }
@@ -1134,285 +658,34 @@ namespace Ruler.Wpf.ViewModels
 
             // Ensure UI updates if the mode has changed
            
-        }
-     
-        /// <summary>
-        /// Indicates if the system's DPI is being used for scaling.
-        /// </summary>
-     
-
-
+        }   
         // Logic for the ExitCommand
-        private void ExitApplication(object parameter)
-        {
-            if (parameter is Window windowToClose)
-            {
-                _persistenceService.SaveRulerState(_rulerInfo);
-                bool isLastRuler = _dialogService.OpenRulers.Count() == 1;
-                windowToClose.Close();
-                if (isLastRuler)
-                {
-                    Application.Current.Shutdown();
-                }
-            }
 
-        }
-
-        // Logic for the ToggleVerticalCommand
-        private void ToggleVertical(object parameter)
-        {
-            IsVertical = !IsVertical;
-            double oldWidth = Width;
-            double oldHeight = Height;
-            SetRulerDimensions(oldHeight, oldWidth);
-        }
-        private bool _isOnlySingleRulerVisible = false;
-        public bool IsOnlySingleRulerVisible
-        {
-            get => _isOnlySingleRulerVisible;
-            set
-            {
-                _isOnlySingleRulerVisible = value;
-                OnPropertyChanged();
-            }
-        }
-
-
-
-        // Logic for the ToggleTopMostCommand
-        private void ToggleTopMost(object parameter)
-        {
-            TopMost = !TopMost;
-        }
-
-        // Logic for the ToggleToolTipCommand
-        private void ToggleToolTip(object parameter)
-        {
-            ShowToolTip = !ShowToolTip;
-        }
-
-        // Logic for the SetOpacityCommand
-        private void SetOpacity(object parameter)
-        {
-            if (parameter is string opacityValue && double.TryParse(opacityValue, out double result))
-            {
-                Opacity = result;
-                SetOpacityFlags(result);
-            }
-        }
-
-        // Logic for the SetSaveTypeCommand
-        private void SetSaveType(object parameter)
-        {
-            SaveTypes saveTypes;
-            if (parameter is string s && Enum.TryParse(s, true, out saveTypes))
-            {
-                SaveType = saveTypes;
-                SetSaveTypeFlags(saveTypes);
-            }
-        }
-        private void GenerateHorizontalTicks(double length)
-        {
-            // Calculate ticks based on Width
-            _topRulerTicks.Clear();
-            _bottomRulerTicks.Clear();
-            var ticks = GenerateRulerTicks(length); // Assuming 100 pixels per major mark
-
-            foreach (var tick in ticks)
-            {
-                // Horizontal: Position is Canvas.Left. No coordinate inversion needed.
-                // Both top and bottom sides use the same position data.
-                _topRulerTicks.Add(tick);
-                if (!IsVertical && _isOnlySingleRulerVisible)
-                {
-                    tick.IsLabelVisible = false;
-                }
-                _bottomRulerTicks.Add(tick);
-            }
-            OnPropertyChanged(nameof(BottomRulerTicks));
-            OnPropertyChanged(nameof(TopRulerTicks));
-        }
-        private void GenerateVerticalTicks(double length)
-        {
-            // Calculate ticks based on the effective height of the content area
-            _topRulerTicks.Clear();
-            _bottomRulerTicks.Clear();
-            var ticks = GenerateRulerTicks(length);
-
-            foreach (var tick in ticks)
-            {
-                // The tick's original position is the distance FROM THE TOP (0 at top, length at bottom).
-                // This is the correct value for the LEFT SIDE (Grid.Column="0").
-                _topRulerTicks.Add(tick);
-                if (IsVertical && _isOnlySingleRulerVisible)
-                {
-                    tick.IsLabelVisible = false;
-                }
-
-
-                _bottomRulerTicks.Add(tick);
-            }
-            OnPropertyChanged(nameof(BottomRulerTicks));
-            OnPropertyChanged(nameof(TopRulerTicks));
-        }
-        public IEnumerable<RulerTick> GenerateRulerTicks(double rulerLength)
-        {
-            var ticks = new List<RulerTick>();
-            double maxLogicalLength = rulerLength;
-
-            // We need to know how many DIPs one ruler unit covers.
-            double dipPerUnit = ScaleFactor;
-            int maxRulerUnit = (int)Math.Ceiling(maxLogicalLength / dipPerUnit);
-
-            // We iterate through the entire length of the ruler to determine tick positions.
-            for (int i = 0;i<=maxRulerUnit ; i++)
-            {
-                double tickPositionInDips = i * dipPerUnit;
-                if (tickPositionInDips > maxLogicalLength)
-                {
-                    break;
-                }
-                // Every 100 pixels, we create a major tick with a label.
-                if (i % 100 == 0)
-                {
-                    ticks.Add(new RulerTick
-                    {
-                        Position = tickPositionInDips,
-                        Label = i.ToString(),
-                        TickSize = 25,
-                        IsLabelVisible = true
-                    });
-                }
-                // Every 50 pixels, we create a major tick without a label.
-                else if (i % 50 == 0)
-                {
-                    ticks.Add(new RulerTick
-                    {
-                        Position = tickPositionInDips,
-                        TickSize = 20
-
-                    });
-                }
-                // Every 10 pixels, we create a minor tick.
-                else if (i % 10 == 0)
-                {
-                    ticks.Add(new RulerTick
-                    {
-                        Position = tickPositionInDips,
-                        TickSize = 10
-                    });
-                }
-                // Every 5 pixels, we create an even smaller minor tick.
-                else if (i % 5 == 0)
-                {
-                    ticks.Add(new RulerTick
-                    {
-                        Position = tickPositionInDips,
-                        TickSize = 5
-                    });
-                }
-                // Every 2 pixels, we create the smallest minor tick.
-                else if (i % 2 == 0)
-                {
-                    ticks.Add(new RulerTick
-                    {
-                        Position = tickPositionInDips,
-                        TickSize = 2
-                    });
-                }
-            }
-
-            return ticks;
-        }
-
-        private void NavigateAbout(object parameter)
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            Version version = assembly.GetName().Version;
-            string message = string.Format(
-                "Original Ruler implemented by Jeff Key\n" +
-                "www.sliver.com\n" +
-                "ruler.codeplex.com\n" +
-                "Icon by Kristen Magee @ www.kbecca.com.\n" +
-                "Maintained by Andrija Cacanovic\n" +
-                "Hosted on \n" +
-                "https://github.com/andrijac/ruler\n" +
-                "Version {0}",
-                $"{version.Major}.{version.Minor}.{version.Build}.{version.MajorRevision}");
-            MessageBox.Show(message, "About Ruler", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        internal void SetInitialState(RulerInfo initialInfo)
-        {
-            _isLoadingState = true;
-
-            // 1. Set all non-dimension/non-orientation properties directly on the model
-            _rulerInfo.Opacity = initialInfo.Opacity;
-            _rulerInfo.ShowToolTip = initialInfo.ShowToolTip;
-            _rulerInfo.IsLocked = initialInfo.IsLocked;
-            _rulerInfo.TopMost = initialInfo.TopMost;
-            _rulerInfo.LocationY = initialInfo.LocationY;
-            _rulerInfo.LocationX = initialInfo.LocationX;
-            _rulerInfo.DisplayedLocation = initialInfo.DisplayedLocation;
-            _rulerInfo.SaveType = initialInfo.SaveType;
-
-
-            // 2. IMPORTANT: Set IsVertical first for reconciliation
-            _rulerInfo.IsVertical = initialInfo.IsVertical;
-
-
-            // 3. Reconciliation Logic for Width and Height based on IsVertical
-            double w = initialInfo.Width;
-            double h = initialInfo.Height;
-
-            // Determine if the saved dimensions are 'horizontal' (width >= height)
-            bool savedHorizontal = w >= h;
-
-            // If the saved orientation clashes with the saved dimensions, swap them.
-            if ((_rulerInfo.IsVertical && savedHorizontal) || (!_rulerInfo.IsVertical && !savedHorizontal))
-            {
-                // Swap dimensions in the model to match the orientation
-                _rulerInfo.Width = h;
-                _rulerInfo.Height = w;
-            }
-            else
-            {
-                // Dimensions are already correctly oriented
-                _rulerInfo.Width = w;
-                _rulerInfo.Height = h;
-            }
-
-            // 4. Set flags for the UI
-            SetOpacityFlags(_rulerInfo.Opacity);
-            SetSaveTypeFlags(_rulerInfo.SaveType);
-
-
-            // 5. Trigger UI updates for all properties
-            // We use OnPropertyChanged for all properties to ensure the UI updates correctly from the reconciled model state.
-            OnPropertyChanged(nameof(Width));
-            OnPropertyChanged(nameof(Height));
-            OnPropertyChanged(nameof(IsVertical));
-            OnPropertyChanged(nameof(Opacity));
-            OnPropertyChanged(nameof(ShowToolTip));
-            OnPropertyChanged(nameof(IsLocked));
-            OnPropertyChanged(nameof(TopMost));
-            OnPropertyChanged(nameof(LocationY));
-            OnPropertyChanged(nameof(LocationX));
-            OnPropertyChanged(nameof(DisplayedLocation));
-            OnPropertyChanged(nameof(SaveType));
-            OnPropertyChanged(nameof(RulerMeasurementsText));
-            OnPropertyChanged(nameof(ScaleFactor));
-            OnPropertyChanged(nameof(IsAutoScaled));
-            // 6. Reset flag after loading is complete
-            _isLoadingState = false;
-
-        }
+       
 
         public void SetGuideLinePosition(double position)
         {
             GuideLinePosition = position;
         }
 
-       
+        public bool IsAutoScaled
+        {
+            get => _rulerInfo.IsAutoScaled;
+            set
+            {
+                if (_rulerInfo.IsAutoScaled != value)
+                {
+                    _isAutoScaled = value;
+                    _rulerInfo.IsAutoScaled = value;
+                    OnPropertyChanged();
+                    // Ensure manual scale checkmarks are updated when auto scale changes
+                    UpdateScaleFlags();
+                }
+            }
+        }
+
+      
+
+
     }
 }

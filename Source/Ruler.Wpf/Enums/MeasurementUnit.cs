@@ -22,14 +22,7 @@ namespace Ruler.Wpf.Enums
 
         /// <summary>Unit is Millimeters. 1 mm = ~3.7795 DIPs.</summary>
         Millimeters = 4,
-
-        /// <summary>Unit is Picas (typographic unit). 1 pica = 16 DIPs.</summary>
-        Picas = 5,
-
         /// <summary>Unit is Points (typographic unit). 1 point = ~1.333 DIPs.</summary>
-        Points = 6,
-
-        /// <summary>Unit is Micrometers. 1 uM = ~0.0037795 DIPs.</summary>
-        Micrometers = 7
+        Points = 5     
     }
 }
