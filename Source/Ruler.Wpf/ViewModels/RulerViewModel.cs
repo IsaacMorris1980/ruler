@@ -431,6 +431,10 @@ namespace Ruler.Wpf.ViewModels
             {
                 UpdateScaleSelection(_rulerInfo.ScaleFactor);
             }
+            if (e.PropertyName == nameof(IsVertical))
+            {
+                OnPropertyChanged(nameof(RulerOrientation));
+            }
 
             // 3. Notify computed properties
             OnPropertyChanged(nameof(RulerMeasurementsText));              

@@ -5,6 +5,7 @@ using Ruler.Wpf.ViewModels;
 using System;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -23,7 +24,7 @@ namespace Ruler.Wpf
         private Point _startPoint;     
         // Flag to track if a drag operation has started
         private bool _isDragging = false;
-      
+        private bool _isGuidelineLocked = false;
 
         public MainWindow(RulerViewModel viewModel, ILoggingService loggingService)
         {
@@ -44,6 +45,11 @@ namespace Ruler.Wpf
                 _viewModel.Top = 0;
             }
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+            this.MouseLeftButtonDown += (s, e) =>
+            {
+                if (e.ChangedButton == MouseButton.Left && !_isGuidelineLocked)
+                    this.DragMove();
+            };
         }
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -91,7 +97,7 @@ namespace Ruler.Wpf
                     
                     viewModel.IsInitialized = true;
                     this.LocationChanged += Window_LocationChanged;
-                    Console.WriteLine($"Canvas Actual Height: {RulerCanvas.ActualHeight}, Actual Width: {RulerCanvas.ActualWidth}");
+                    Console.WriteLine($"Canvas Actual Height: {RulerGrid.ActualHeight}, Actual Width: {RulerGrid.ActualWidth}");
                   
                 }
             }
@@ -267,28 +273,23 @@ namespace Ruler.Wpf
             };
         }
 
-        private void RulerCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
+        private void RulerGrid_PreviewMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed && RulerCanvas.IsMouseCaptured)
-            {
-                Point currentPoint = e.GetPosition(RulerCanvas);
-                if (!_isDragging && (Math.Abs(currentPoint.X - _startPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                                     Math.Abs(currentPoint.Y - _startPoint.Y) > SystemParameters.MinimumVerticalDragDistance))
-                {
-                    _isDragging = true;
-                    RulerCanvas.ReleaseMouseCapture();
-                    this.DragMove();
-                }
+            if (_isGuidelineLocked) return;
 
-            }
+            Point mousePos = e.GetPosition(RulerGrid);
+            UpdateGuideline(mousePos);
+
+            if (GlobalGuideline.Visibility != Visibility.Visible)
+                GlobalGuideline.Visibility = Visibility.Visible;
         }
        
-        private void RulerCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        private void RulerGrid_PreviewMouseUp(object sender, MouseButtonEventArgs e)
         {
-            RulerCanvas.ReleaseMouseCapture();
+            RulerGrid.ReleaseMouseCapture();
             if (!_isDragging)
             {
-                Point clickPoint = e.GetPosition(RulerCanvas);
+                Point clickPoint = e.GetPosition(RulerGrid);
                 double position;
                 if (_viewModel.IsVertical)
                 {
@@ -305,13 +306,41 @@ namespace Ruler.Wpf
             }
 
         }
-        private void RulerCanvas_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void RulerGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            _startPoint = e.GetPosition(RulerCanvas);
-            _isDragging = false;
-            RulerCanvas.CaptureMouse();
+            _isGuidelineLocked = !_isGuidelineLocked;
+
+            if (_isGuidelineLocked)
+            {
+                // Visual feedback for locked state (Blue)
+                GlobalGuideline.Background = new SolidColorBrush(Color.FromArgb(80, 0, 0, 255));
+                GlobalGuideline.BorderBrush = Brushes.Blue;
+            }
+            else
+            {
+                // Visual feedback for active state (Red)
+                GlobalGuideline.Background = new SolidColorBrush(Color.FromArgb(80, 255, 0, 0));
+                GlobalGuideline.BorderBrush = Brushes.Red;
+
+                // Jump to current mouse position immediately upon unlock
+                UpdateGuideline(e.GetPosition(RulerGrid));
+            }
         }
-        private void RulerCanvas_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        private void UpdateGuideline(Point pos)
+        {
+            if (_viewModel.RulerOrientation == Orientation.Horizontal)
+            {
+                // Center the 2px guideline on the mouse cursor
+                GuidelineTransform.X = pos.X - 1;
+                GuidelineTransform.Y = 0;
+            }
+            else
+            {
+                GuidelineTransform.X = 0;
+                GuidelineTransform.Y = pos.Y - 1;
+            }
+        }
+        private void RulerGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (_viewModel != null && _viewModel.IsLocked)
             {
@@ -319,19 +348,19 @@ namespace Ruler.Wpf
                 //    to the Window/System level where it might be consumed.
                 e.Handled = true;
 
-                if (RulerCanvas.ContextMenu != null)
+                if (RulerGrid.ContextMenu != null)
                 {
                     // 2. Manually set the placement target to the canvas itself
-                    RulerCanvas.ContextMenu.PlacementTarget = RulerCanvas;
+                    RulerGrid.ContextMenu.PlacementTarget = RulerGrid;
 
                     // 3. Set the position of the menu to the current mouse click position
-                    Point clickPoint = e.GetPosition(RulerCanvas);
-                    RulerCanvas.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.AbsolutePoint;
-                    RulerCanvas.ContextMenu.HorizontalOffset = clickPoint.X;
-                    RulerCanvas.ContextMenu.VerticalOffset = clickPoint.Y;
+                    Point clickPoint = e.GetPosition(RulerGrid);
+                    RulerGrid.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.AbsolutePoint;
+                    RulerGrid.ContextMenu.HorizontalOffset = clickPoint.X;
+                    RulerGrid.ContextMenu.VerticalOffset = clickPoint.Y;
 
                     // 4. Open the ContextMenu
-                    RulerCanvas.ContextMenu.IsOpen = true;
+                    RulerGrid.ContextMenu.IsOpen = true;
                 }
             }
         }

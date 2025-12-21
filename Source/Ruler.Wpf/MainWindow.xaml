@@ -128,6 +128,68 @@
             ResizeBorderThickness="10"    CaptionHeight="0"             CornerRadius="0" />
     </shell:WindowChrome.WindowChrome>
     <Border x:Name="RulerContainer" 
+        Background="Transparent" 
+        BorderBrush="Black" 
+        BorderThickness="1">
+        <Border.LayoutTransform>
+            <ScaleTransform ScaleX="{Binding ScaleFactor}" ScaleY="{Binding ScaleFactor}"/>
+        </Border.LayoutTransform>
+
+        <!-- Use a Grid to stack layers. Layers at the bottom are visually on top. -->
+        <Grid x:Name="RulerGrid"
+          Background="Transparent"
+          PreviewMouseMove="RulerGrid_PreviewMouseMove"
+          PreviewMouseUp="RulerGrid_PreviewMouseUp"
+          PreviewMouseLeftButtonDown="RulerGrid_PreviewMouseLeftButtonDown"
+          PreviewMouseRightButtonDown="RulerGrid_PreviewMouseRightButtonDown">
+
+            <!-- LAYER 1: The Actual Ruler (Bottom Layer) -->
+            <controls:RulerControl 
+            UnitType="{Binding CurrentUnit}"
+            Orientation="{Binding RulerOrientation}"
+            IsHitTestVisible="True"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch" />
+
+            <!-- LAYER 2: The Guide Line (Top Layer) -->
+            <!-- Set IsHitTestVisible="False" so clicks go THROUGH this line to the Ruler -->
+            <Border x:Name="GlobalGuideline"
+                    Background="#40FF0000"
+                    BorderBrush="Red"
+                    IsHitTestVisible="False"
+                    Visibility="Collapsed">
+
+                <Border.RenderTransform>
+                    <!-- This transform is moved by the code-behind UpdateGuideline method -->
+                    <TranslateTransform x:Name="GuidelineTransform" X="0" Y="0" />
+                </Border.RenderTransform>
+
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <!-- DEFAULT: Horizontal Ruler Mode (creates a Vertical Line) -->
+                        <Setter Property="Width" Value="2"/>
+                        <Setter Property="Height" Value="{Binding ActualHeight, ElementName=RulerGrid}"/>
+                        <Setter Property="HorizontalAlignment" Value="Left"/>
+                        <Setter Property="VerticalAlignment" Value="Top"/>
+                        <Setter Property="BorderThickness" Value="1,0,1,0"/>
+
+                        <Style.Triggers>
+                            <!-- VERTICAL Ruler Mode (creates a Horizontal Line) -->
+                            <!-- Ensure 'Orientation' matches the property name in your ViewModel -->
+                            <DataTrigger Binding="{Binding RulerOrientation}" Value="Vertical">
+                                <Setter Property="Width" Value="{Binding ActualWidth, ElementName=RulerGrid}"/>
+                                <Setter Property="Height" Value="2"/>
+                                <Setter Property="HorizontalAlignment" Value="Left"/>
+                                <Setter Property="VerticalAlignment" Value="Top"/>
+                                <Setter Property="BorderThickness" Value="0,1,0,1"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
+        </Grid>
+    </Border>
+    <!--<Border x:Name="RulerContainer" 
             Background="Transparent" 
             CornerRadius="0" 
             BorderBrush="Black" 
@@ -135,7 +197,7 @@
         <Border.LayoutTransform>
             <ScaleTransform ScaleX="{Binding ScaleFactor}" ScaleY="{Binding ScaleFactor}"/>
         </Border.LayoutTransform>
-        <!-- 
+        --><!-- 
             The ToolTip is set using PROPERTY ELEMENT SYNTAX (<Border.ToolTip>...</Border.ToolTip>). 
             It is NOT a content child. This is correct.
         -->
@@ -144,18 +206,18 @@
         <!-- 
             *** This Grid is the ONLY content element allowed inside the RulerContainer Border. ***
             Padding="1" aligns Canvas with the inner border edges.
-        -->
-        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <!-- Only one row, taking up all available space -->
+        --><!--
+        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent">
+            --><!-- Only one row, taking up all available space --><!--
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Ruler Content Area (Canvas is the content of the Grid row) -->
+            --><!-- Ruler Content Area (Canvas is the content of the Grid row) -->
             <!-- 
                  The Margin="-0.5, 0, -0.5, 0" centers 1px wide ticks on the pixel boundary, 
                  making the 0-tick and Max-tick visually flush with the side borders.
-            -->
+            --><!--
             <Canvas Grid.Row="0" x:Name="RulerCanvas" 
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
@@ -166,7 +228,7 @@
                     PreviewMouseLeftButtonDown="RulerCanvas_PreviewMouseLeftButtonDown"
                     PreviewMouseRightButtonDown="RulerCanvas_PreviewMouseRightButtonDown"
                     Background="Transparent">
-                <Canvas.Style>
+                --><!--<Canvas.Style>
                     <Style TargetType="Canvas">
                         <Style.Triggers>
                             <DataTrigger  Binding="{Binding IsVertical}" Value="True">
@@ -177,10 +239,10 @@
                             </DataTrigger>
                         </Style.Triggers>                     
                     </Style>
-                </Canvas.Style>
+                </Canvas.Style>-->
               
 
-                <!-- GUIDE LINE CONTAINER -->
+                <!-- GUIDE LINE CONTAINER --><!--
                 <Border x:Name="GuideLineContainer"
         Background="Yellow"  
                     HorizontalAlignment="Left" 
@@ -188,46 +250,46 @@
                         IsHitTestVisible="False"
         Visibility="{Binding IsGuideLineVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
         >
-                    <!-- Ensure it is on top of the ruler ticks -->
+                     --><!--Ensure it is on top of the ruler ticks--><!-- 
 
                     <Border.Style>
                         <Style TargetType="{x:Type Border}">
-                            <!-- 
+                            --><!-- 
             ===================================================================
             DEFAULT STATE: IsVertical = False (Horizontal Ruler) 
             We need a VERTICAL line that moves on X.
             ===================================================================
             -->
 
-                            <!-- Default Dimensions: Thin and tall (Vertical Line) -->
+                             <!--Default Dimensions: Thin and tall (Vertical Line)--><!-- 
                             <Setter Property="Width" Value="2"/>
                             <Setter Property="Height" Value="{Binding ActualHeight, ElementName=RulerCanvas}"/>
 
-                            <!-- Default Transform: Moves along X-axis (Horizontal movement) -->
+                             --><!--Default Transform: Moves along X-axis (Horizontal movement)--><!-- 
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
-                                    <!-- Uses GuideLinePosition for X movement -->
+                                     Uses GuideLinePosition for X movement 
                                     <TranslateTransform X="{Binding GuideLinePosition}" Y="0"/>
                                 </Setter.Value>
                             </Setter>
 
                             <Style.Triggers>
-                                <!-- 
+                                --><!-- 
                 ===================================================================
                 TRIGGER STATE: IsVertical = True (Vertical Ruler)
                 We need a HORIZONTAL line that moves on Y.
                 ===================================================================
-                -->
+                --><!--
                                 <DataTrigger Binding="{Binding IsVertical}" Value="True">
 
-                                    <!-- 1. Swap Dimensions: Make it a wide, short horizontal line -->
+                                     --><!--1. Swap Dimensions: Make it a wide, short horizontal line--><!-- 
                                     <Setter Property="Width" Value="{Binding ActualWidth, ElementName=RulerCanvas}"/>
                                     <Setter Property="Height" Value="2"/>
 
-                                    <!-- 2. Swap Transform: Make it move along the Y-axis (Vertical movement) -->
+                                     --><!--2. Swap Transform: Make it move along the Y-axis (Vertical movement)--><!-- 
                                     <Setter Property="RenderTransform">
                                         <Setter.Value>
-                                            <!-- Uses GuideLinePosition for Y movement -->
+                                             Uses GuideLinePosition for Y movement 
                                             <TranslateTransform X="0" Y="{Binding GuideLinePosition}"/>
                                         </Setter.Value>
                                     </Setter>
@@ -239,7 +301,7 @@
 
                
 
-                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    --><!--<Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">-->
                         <!--<Grid.RowDefinitions>
                             <RowDefinition Height="35"/>
                             <RowDefinition Height="*" />
@@ -250,26 +312,26 @@
                             <ColumnDefinition Width="35"/>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="35"/>
-                        </Grid.ColumnDefinitions>-->
+                        </Grid.ColumnDefinitions>--><!--
 
                
                     <controls:RulerControl 
                                            UnitType="{Binding CurrentUnit}"
-                                           Orientation="Horizontal"                                          
-                                           IsHitTestVisible="False"
+                                           Orientation="{Binding RulerOrientation}"
                                            Background="Red"
                                            Height="{Binding Height}"
                                            Width="{Binding Width}"
+                        IsHitTestVisible="True"
                                            HorizontalAlignment="Stretch"
                                            VerticalAlignment="Stretch">
-                        <!-- Only show if the ruler is NOT vertical (i.e., it is horizontal) -->
+                        --><!-- Only show if the ruler is NOT vertical (i.e., it is horizontal) -->
                         <!--<controls:RulerControl.Visibility>
                             <Binding Path="IsVertical" Converter="{StaticResource BooleanToVisibilityConverter}" ConverterParameter="Invert"/>
-                        </controls:RulerControl.Visibility>-->
+                        </controls:RulerControl.Visibility>--><!--
                     </controls:RulerControl>
 
 
-                    <!--<controls:RulerControl 
+                    --><!--<controls:RulerControl 
                                    UnitType="{Binding CurrentUnit}"
                                    Orientation="Vertical"
                                    Width="{Binding Width}"
@@ -311,9 +373,9 @@
 
 
 
-                </Grid>
+                <!--</Grid>--><!--
             </Canvas>
         </Grid>
-    </Border>
+    </Border>-->
   
 </Window>

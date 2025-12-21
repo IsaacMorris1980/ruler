@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:Ruler.Wpf.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+    <Grid Background="Transparent">
         <!-- 
         1. Background Layer: Provides the solid color base for the ruler. 
         It also ensures the control has a visual presence.
@@ -31,7 +31,7 @@
         NOTE: When the Orientation is Vertical, the C# code applies a RotateTransform(90)
         to this LabelsPanel to ensure the text runs parallel to the ruler length.
         -->
-        <Canvas x:Name="LabelsPanel"/>
+        <Canvas x:Name="LabelsPanel" Background="Transparent"/>
 
     </Grid>
 </UserControl>
