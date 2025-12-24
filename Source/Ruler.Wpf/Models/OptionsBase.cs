@@ -11,9 +11,10 @@ namespace Ruler.Wpf.Models
 {
     public abstract class OptionBase : ModelBase
     {
-        private bool _isSelected;
+        private bool _isSelected=false;
+        private bool _isEnabled=true;
 
-        
+
         public double Value { get; set; }
 
         
@@ -25,10 +26,11 @@ namespace Ruler.Wpf.Models
             get => _isSelected;
             set => SetProperty(ref _isSelected, value);
         }
-        
-       
+        public bool IsEnabled { get=> _isEnabled; set=> SetProperty(ref _isEnabled,value); }
+
+
     }
-    public class ScaleOption : OptionBase { }
+    public class ScaleOption : OptionBase {}
 
     public class OpacityOption : OptionBase { }
     public class UnitOption : OptionBase

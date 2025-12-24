@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -28,9 +29,11 @@ namespace Ruler.Wpf.ViewModels
         private IDialogService _dialogService;
         private ILoggingService _loggingService;
         private Point _displaylocation=new Point(0,0);
+        private bool _isMagnifierEnabled = false;
 
-   
-    
+
+
+
 
         private bool _isInitialized = false; 
        
@@ -54,6 +57,7 @@ namespace Ruler.Wpf.ViewModels
         private ICommand _manualScaleCommand;
         private ICommand _setScaleCommand;
         private ICommand _setUnitCommand;
+        private ICommand _enableMagnifierCommand;
 
 
         private int _horizontalMinHeight = 85;
@@ -67,7 +71,6 @@ namespace Ruler.Wpf.ViewModels
         private bool _isResizing;
         private bool _isMoving;
         private double _length;
-        private bool _isLocked;
         private int leftMargin = 111;
         private double actualWidth = 203;
         private bool _isLoadingState;
@@ -81,6 +84,7 @@ namespace Ruler.Wpf.ViewModels
         private double _scaleFactor;
         private bool _isOnlySingleRulerVisible = false;
         private bool _isAutoScaled;
+        private double _systemDpiScale;
         #region Constructor
         public RulerViewModel(IDialogService dialogService, RulerInfo initialInfo, SingleRulerPersistenceService persistenceService, ILoggingService loggingService)
         {
@@ -191,6 +195,23 @@ namespace Ruler.Wpf.ViewModels
             get => _rulerInfo.SaveType;
             set => _rulerInfo.SaveType = value;
         }
+        public bool IsMagnifierEnabled
+        {
+            get => _isMagnifierEnabled;
+            set
+            {
+                SetProperty(ref _isMagnifierEnabled, value);
+            }
+        }   
+        public bool IsPhysicalUnits
+        {
+            get
+            {
+                return CurrentUnit == MeasurementUnit.Inches ||
+                       CurrentUnit == MeasurementUnit.Millimeters ||
+                       CurrentUnit == MeasurementUnit.Centimeters;
+            }
+        }   
         #endregion
         #region Initialization and Update Methods
         private void InitializeUnits()
@@ -276,6 +297,7 @@ namespace Ruler.Wpf.ViewModels
             _duplicateCommand = new RelayCommand(DuplicateRuler);            
             _setScaleCommand = new RelayCommand(SetScaleCommand);
             _setUnitCommand = new RelayCommand(SetMeasurementUnit);
+            _enableMagnifierCommand = new RelayCommand(_ => ToggleMagnifier());
         }
         internal void SetInitialState(RulerInfo initialInfo)
         {
@@ -369,6 +391,25 @@ namespace Ruler.Wpf.ViewModels
                 }
             }
         }
+        public void DisableNonPhysicalScales()
+        {
+            foreach (var option in ScaleOptions)
+            {
+                if (option.Value != 1.0)
+                {
+                    option.IsEnabled = false;
+                }
+            }
+            UpdateScaleFlags();
+        }
+        public void EnableAllScales()
+        {
+            foreach (var option in ScaleOptions)
+            {
+                option.IsEnabled = true;
+            }
+            UpdateScaleFlags();
+        }
         public void UpdateOpacitySelection(double selectedOpacity)
         {
             foreach (var option in OpacityOptions)
@@ -435,11 +476,28 @@ namespace Ruler.Wpf.ViewModels
             {
                 OnPropertyChanged(nameof(RulerOrientation));
             }
+            if (e.PropertyName == nameof(CurrentUnit))
+            {
+                if (IsPhysicalUnits)
+                {
+                    DisableNonPhysicalScales();
+                }
+                else
+                {
+                    EnableAllScales();
+
+                }
+                OnPropertyChanged(nameof(CurrentUnit));
+            }
 
             // 3. Notify computed properties
             OnPropertyChanged(nameof(RulerMeasurementsText));              
-        }        
-       
+        }
+        private void ToggleMagnifier()
+        {
+            IsMagnifierEnabled = !IsMagnifierEnabled;
+        }
+
         private void SetScaleCommand(object parameter)
         {
             if (parameter is ScaleOption option)
@@ -593,59 +651,73 @@ namespace Ruler.Wpf.ViewModels
         public ICommand ManualScaleCommand => _manualScaleCommand;
         public ICommand ScaleCommand => _setScaleCommand;
         public ICommand SetUnitCommand => _setUnitCommand;
-
-
-        public void UpdateScaleFlags()
+        public ICommand EnableMagnifierCommand => _enableMagnifierCommand;
+       public void UpdateScaleFlags()
         {
            foreach (var option in ScaleOptions)
             {
-                option.IsSelected = option.Value == ScaleFactor;
-            }
-        }
-        public void SetScaleFactorCommand(object parameter)
-        {
-            if (parameter != null && parameter is ScaleOption scales)
-            {
-
-
-                foreach (var option in ScaleOptions)
+                if (IsAutoScaled && option.Value == 0.0)
                 {
-                    if (option.Value == 0.0)
-                    {
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            IsAutoScaled = true;
-                        });
-                        ScaleFactor = option.Value;
-                        break;
-                    }
-                    else if (option.Value == scales.Value)
-                    {
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            IsAutoScaled = false;
-                        });
-                        ScaleFactor = option.Value;
-                        break;
-                    }
+                    option.IsSelected = true;
+                }
+                else if (!IsAutoScaled && option.Value == ScaleFactor)
+                {
+                    option.IsSelected = true;
+                }
+                else
+                {
+                    option.IsSelected = false;
                 }
             }
-           
-            UpdateScaleFlags();
         }
+        //public void SetScaleFactorCommand(object parameter)
+        //{
+        //    if (parameter != null && parameter is ScaleOption scales)
+        //    {
+
+
+        //        foreach (var option in ScaleOptions)
+        //        {
+        //            if (option.Value == 0.0)
+        //            {
+        //                Application.Current.Dispatcher.Invoke(() =>
+        //                {
+        //                    IsAutoScaled = true;
+        //                });
+        //                ScaleFactor = SystemDpiScale;
+        //                break;
+        //            }
+        //            else if (option.Value == scales.Value)
+        //            {
+        //                Application.Current.Dispatcher.Invoke(() =>
+        //                {
+        //                    IsAutoScaled = false;
+        //                });
+        //                ScaleFactor = option.Value;
+        //                break;
+        //            }
+        //        }
+        //    }
+           
+        //    UpdateScaleFlags();
+        //}
        public Orientation RulerOrientation
         {
             get => IsVertical ? Orientation.Vertical : Orientation.Horizontal;
         }
         public double ScaleFactor
         {
-            get => _rulerInfo.ScaleFactor;
+            get=>_rulerInfo.ScaleFactor;
+            
             set
             {
-                if (_rulerInfo.ScaleFactor!= value)
-                {                    
-                    _rulerInfo.ScaleFactor = value;                  
-                    
+                if (IsAutoScaled)
+                {
+                    _rulerInfo.ScaleFactor = SystemDpiScale;
+                }
+                else
+                {
+                   _rulerInfo.ScaleFactor = value;
                 }
             }
         }
@@ -662,10 +734,33 @@ namespace Ruler.Wpf.ViewModels
 
             // Ensure UI updates if the mode has changed
            
-        }   
+        }
         // Logic for the ExitCommand
 
-       
+        public double SystemDpiScale
+        {
+            get => _systemDpiScale;
+            set
+            {
+                if (_systemDpiScale != value)
+                {
+                    _systemDpiScale = value;
+                    OnPropertyChanged();
+                    // When DPI changes, we usually need to force a redraw of the ruler
+                    OnPropertyChanged(nameof(ScaleFactor));
+                }
+            }
+        }
+        public void UpdateSystemDpi(Visual visual)
+        {
+            var source = PresentationSource.FromVisual(visual);
+            if (source?.CompositionTarget != null)
+            {
+                // In modern WPF (4.6.2+), use VisualTreeHelper.GetDpi
+                DpiScale dpi = VisualTreeHelper.GetDpi(visual);
+                SystemDpiScale = dpi.DpiScaleX;
+            }
+        }
 
         public void SetGuideLinePosition(double position)
         {

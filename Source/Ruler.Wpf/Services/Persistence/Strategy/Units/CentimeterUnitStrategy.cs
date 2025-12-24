@@ -45,11 +45,10 @@ namespace Ruler.Wpf.Services.Persistence.Strategy.Units
         }
         public double GetTickLength(double currentPosition, double dipPerInch, double rulerDepth)
         {
-            double subdivisionDip = Math.Round(currentPosition % MajorUnitDip);
+            double subdivisionDip = currentPosition % MajorUnitDip;
 
             // Calculate subdivision level based on millimeters (10 mm per cm)
-            double millimeters = subdivisionDip / (MajorUnitDip / 10.0);
-            int roundedMillimeters = (int)Math.Round(millimeters);
+            int roundedMillimeters = (int)Math.Round(subdivisionDip/(MajorUnitDip/10.0));
 
             // --- Tick Determination Logic (fixed lengths) ---
             if (roundedMillimeters == 0 || roundedMillimeters == 10) return MajorTickLength;

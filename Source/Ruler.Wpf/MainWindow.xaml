@@ -94,7 +94,8 @@
                             <Setter Property="CommandParameter" Value="{Binding}"/>
                             <!-- Ensures MenuItem acts like a RadioButton (only one can be checked in the group) -->
                             <Setter Property="IsCheckable" Value="True"/>
-                        </Style>
+                        <Setter Property="IsEnabled" Value="{Binding IsEnabled}"/>
+                    </Style>
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
             <MenuItem Header="Measurement Unit" ItemsSource="{Binding UnitsOptions}">
@@ -112,7 +113,9 @@
                         <Setter Property="IsCheckable" Value="True"/>
                     </Style>
                 </MenuItem.ItemContainerStyle>
-            </MenuItem> 
+            </MenuItem>
+            <MenuItem Header="Toggle Magnifier" 
+          Command="{Binding EnableMagnifierCommand}" />
             <Separator/>
             <MenuItem Header="Close" Command="{Binding ExitCommand}">
                 <MenuItem.CommandParameter>
@@ -141,52 +144,72 @@
           PreviewMouseMove="RulerGrid_PreviewMouseMove"
           PreviewMouseUp="RulerGrid_PreviewMouseUp"
           PreviewMouseLeftButtonDown="RulerGrid_PreviewMouseLeftButtonDown"
-          PreviewMouseRightButtonDown="RulerGrid_PreviewMouseRightButtonDown">
+          PreviewMouseRightButtonDown="RulerGrid_PreviewMouseRightButtonDown"
+           MouseLeave="RulerGrid_MouseLeave">
 
             <!-- LAYER 1: The Actual Ruler (Bottom Layer) -->
-            <controls:RulerControl 
+            <controls:RulerControl x:Name="MainRuler"
             UnitType="{Binding CurrentUnit}"
             Orientation="{Binding RulerOrientation}"
             IsHitTestVisible="True"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch" />
 
-            <!-- LAYER 2: The Guide Line (Top Layer) -->
-            <!-- Set IsHitTestVisible="False" so clicks go THROUGH this line to the Ruler -->
-            <Border x:Name="GlobalGuideline"
-                    Background="#40FF0000"
-                    BorderBrush="Red"
-                    IsHitTestVisible="False"
-                    Visibility="Collapsed">
+            <Canvas x:Name="GuidelineCanvas" IsHitTestVisible="False">
+                <!-- Tracking Red Line -->
+                <Border x:Name="GlobalGuideline" 
+                    Width="1" 
+                    Background="Red" 
+                    Height="{Binding ActualHeight, ElementName=RulerGrid}"
+                    Visibility="Collapsed" />
 
-                <Border.RenderTransform>
-                    <!-- This transform is moved by the code-behind UpdateGuideline method -->
-                    <TranslateTransform x:Name="GuidelineTransform" X="0" Y="0" />
-                </Border.RenderTransform>
+                <!-- Locked Blue Line -->
+                <Border x:Name="LockedGuideline" 
+                    Width="1" 
+                    Background="Blue" 
+                    Height="{Binding ActualHeight, ElementName=RulerGrid}"
+                    Visibility="Collapsed" />
+            </Canvas>
+            <!-- Magnifier Layer -->
+            <Canvas x:Name="MagnifierCanvas" IsHitTestVisible="False">
+                <!-- The Square/Rectangular Lens (Switched to Rectangle for easier alignment) -->
+                <Rectangle x:Name="MagnifierEllipse"
+                       Width="140" Height="100"
+                       Stroke="#FF888888" 
+                       StrokeThickness="1"
+                       Visibility="Collapsed">
+                    <Rectangle.Fill>
+                        <VisualBrush x:Name="MagnifierBrush" 
+                                 Visual="{Binding ElementName=MainRuler}"
+                                 Stretch="Fill"
+                                 ViewboxUnits="Absolute"
+                                 ViewportUnits="Absolute" />
+                    </Rectangle.Fill>
+                    <Rectangle.Effect>
+                        <DropShadowEffect BlurRadius="15" 
+                                      Opacity="0.4" 
+                                      ShadowDepth="4" 
+                                      Direction="315" />
+                    </Rectangle.Effect>
+                </Rectangle>
 
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <!-- DEFAULT: Horizontal Ruler Mode (creates a Vertical Line) -->
-                        <Setter Property="Width" Value="2"/>
-                        <Setter Property="Height" Value="{Binding ActualHeight, ElementName=RulerGrid}"/>
-                        <Setter Property="HorizontalAlignment" Value="Left"/>
-                        <Setter Property="VerticalAlignment" Value="Top"/>
-                        <Setter Property="BorderThickness" Value="1,0,1,0"/>
+                <!-- Virtual Locked Line: Represents the Blue Line inside the zoom -->
+                <Line x:Name="MagnifierLockedLine" 
+                  Stroke="Blue" 
+                  StrokeThickness="1" 
+                  X1="0" Y1="0" X2="0" Y2="1" 
+                  Stretch="Fill"
+                  Visibility="Collapsed" />
 
-                        <Style.Triggers>
-                            <!-- VERTICAL Ruler Mode (creates a Horizontal Line) -->
-                            <!-- Ensure 'Orientation' matches the property name in your ViewModel -->
-                            <DataTrigger Binding="{Binding RulerOrientation}" Value="Vertical">
-                                <Setter Property="Width" Value="{Binding ActualWidth, ElementName=RulerGrid}"/>
-                                <Setter Property="Height" Value="2"/>
-                                <Setter Property="HorizontalAlignment" Value="Left"/>
-                                <Setter Property="VerticalAlignment" Value="Top"/>
-                                <Setter Property="BorderThickness" Value="0,1,0,1"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-            </Border>
+                <!-- Red Center Line: The precision cursor for the magnifier -->
+                <Line x:Name="MagnifierLine" 
+                  Stroke="Red" 
+                  StrokeThickness="1" 
+                  X1="0" Y1="0" X2="0" Y2="1" 
+                  Stretch="Fill"
+                  Visibility="Collapsed" />
+            </Canvas>
+
         </Grid>
     </Border>
     <!--<Border x:Name="RulerContainer" 
