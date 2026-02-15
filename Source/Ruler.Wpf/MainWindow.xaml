@@ -16,9 +16,8 @@
         xmlns:models ="clr-namespace:Ruler.Wpf.Models"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:controls="clr-namespace:Ruler.Wpf.Controls"
-        xmlns:converters="clr-namespace:Ruler.Wpf.Converters"
-        mc:Ignorable="d"
         Title="Ruler"
+        Icon="/app.ico"
         AllowsTransparency="True"
         WindowStyle="None"
         Background="LightGray"
@@ -30,17 +29,10 @@
         Topmost="{Binding TopMost,Mode=TwoWay}"
         ResizeMode="{Binding WindowResizeMode}"
         ToolTip="{Binding RulerMeasurementsText}"
-        ToolTipService.IsEnabled="{Binding ShowToolTip}"
-        SizeChanged="Window_SizeChanged"
-        LocationChanged="Window_LocationChanged"
->
+        ToolTipService.IsEnabled="{Binding ShowToolTip}">
 
-    <Window.Resources>
-        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <converters:BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-    </Window.Resources>
     <Window.ContextMenu >
-        <ContextMenu Background="Gray">
+        <ContextMenu Background="Gray" Name="ShowMenu">
             <MenuItem Header="Always on Top" IsCheckable="True" IsChecked="{Binding TopMost,Mode=OneWay}" Command="{Binding ToggleTopMostCommand}"/>
             <MenuItem Header="Change Orientation" Command="{Binding ToggleVerticalCommand}"/>
             <MenuItem Header="Tool Tip" IsCheckable="True" IsChecked="{Binding ShowToolTip,Mode=OneWay}" Command="{Binding ToggleToolTipCommand}"/>
@@ -116,6 +108,22 @@
             </MenuItem>
             <MenuItem Header="Toggle Magnifier" 
           Command="{Binding EnableMagnifierCommand}" />
+            <MenuItem Header="Magnifier Scale" ItemsSource="{Binding MagnifierScaleOptions}">
+                <MenuItem.ItemContainerStyle>
+                    <Style TargetType="{x:Type MenuItem}">
+                        <!-- Binds the text of the MenuItem to the Label (e.g., "2x") -->
+                        <Setter Property="Header" Value="{Binding Label}"/>
+                        <!-- Binds the IsChecked state to the IsSelected property (the "flag") -->
+                        <Setter Property="IsChecked" Value="{Binding IsSelected}"/>
+                        <!-- Binds the Command to the ViewModel's command -->
+                        <Setter Property="Command" Value="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=DataContext.SetMagnifierScaleCommand}"/>
+                        <!-- Passes the entire MagnifierScaleOption object as the parameter to the command -->
+                        <Setter Property="CommandParameter" Value="{Binding}"/>
+                        <!-- Ensures MenuItem acts like a RadioButton (only one can be checked in the group) -->
+                        <Setter Property="IsCheckable" Value="True"/>
+                    </Style>
+                </MenuItem.ItemContainerStyle>
+            </MenuItem>
             <Separator/>
             <MenuItem Header="Close" Command="{Binding ExitCommand}">
                 <MenuItem.CommandParameter>
@@ -130,275 +138,60 @@
         <shell:WindowChrome 
             ResizeBorderThickness="10"    CaptionHeight="0"             CornerRadius="0" />
     </shell:WindowChrome.WindowChrome>
-    <Border x:Name="RulerContainer" 
-        Background="Transparent" 
-        BorderBrush="Black" 
-        BorderThickness="1">
-        <Border.LayoutTransform>
-            <ScaleTransform ScaleX="{Binding ScaleFactor}" ScaleY="{Binding ScaleFactor}"/>
-        </Border.LayoutTransform>
-
-        <!-- Use a Grid to stack layers. Layers at the bottom are visually on top. -->
-        <Grid x:Name="RulerGrid"
-          Background="Transparent"
-          PreviewMouseMove="RulerGrid_PreviewMouseMove"
-          PreviewMouseUp="RulerGrid_PreviewMouseUp"
-          PreviewMouseLeftButtonDown="RulerGrid_PreviewMouseLeftButtonDown"
-          PreviewMouseRightButtonDown="RulerGrid_PreviewMouseRightButtonDown"
-           MouseLeave="RulerGrid_MouseLeave">
-
-            <!-- LAYER 1: The Actual Ruler (Bottom Layer) -->
-            <controls:RulerControl x:Name="MainRuler"
-            UnitType="{Binding CurrentUnit}"
-            Orientation="{Binding RulerOrientation}"
-            IsHitTestVisible="True"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch" />
-
-            <Canvas x:Name="GuidelineCanvas" IsHitTestVisible="False">
-                <!-- Tracking Red Line -->
-                <Border x:Name="GlobalGuideline" 
-                    Width="1" 
-                    Background="Red" 
-                    Height="{Binding ActualHeight, ElementName=RulerGrid}"
-                    Visibility="Collapsed" />
-
-                <!-- Locked Blue Line -->
-                <Border x:Name="LockedGuideline" 
-                    Width="1" 
-                    Background="Blue" 
-                    Height="{Binding ActualHeight, ElementName=RulerGrid}"
-                    Visibility="Collapsed" />
-            </Canvas>
-            <!-- Magnifier Layer -->
-            <Canvas x:Name="MagnifierCanvas" IsHitTestVisible="False">
-                <!-- The Square/Rectangular Lens (Switched to Rectangle for easier alignment) -->
-                <Rectangle x:Name="MagnifierEllipse"
-                       Width="140" Height="100"
-                       Stroke="#FF888888" 
-                       StrokeThickness="1"
-                       Visibility="Collapsed">
-                    <Rectangle.Fill>
-                        <VisualBrush x:Name="MagnifierBrush" 
-                                 Visual="{Binding ElementName=MainRuler}"
-                                 Stretch="Fill"
-                                 ViewboxUnits="Absolute"
-                                 ViewportUnits="Absolute" />
-                    </Rectangle.Fill>
-                    <Rectangle.Effect>
-                        <DropShadowEffect BlurRadius="15" 
-                                      Opacity="0.4" 
-                                      ShadowDepth="4" 
-                                      Direction="315" />
-                    </Rectangle.Effect>
-                </Rectangle>
-
-                <!-- Virtual Locked Line: Represents the Blue Line inside the zoom -->
-                <Line x:Name="MagnifierLockedLine" 
-                  Stroke="Blue" 
-                  StrokeThickness="1" 
-                  X1="0" Y1="0" X2="0" Y2="1" 
-                  Stretch="Fill"
-                  Visibility="Collapsed" />
-
-                <!-- Red Center Line: The precision cursor for the magnifier -->
-                <Line x:Name="MagnifierLine" 
-                  Stroke="Red" 
-                  StrokeThickness="1" 
-                  X1="0" Y1="0" X2="0" Y2="1" 
-                  Stretch="Fill"
-                  Visibility="Collapsed" />
-            </Canvas>
-
-        </Grid>
-    </Border>
-    <!--<Border x:Name="RulerContainer" 
-            Background="Transparent" 
-            CornerRadius="0" 
-            BorderBrush="Black" 
-            BorderThickness="1">
-        <Border.LayoutTransform>
-            <ScaleTransform ScaleX="{Binding ScaleFactor}" ScaleY="{Binding ScaleFactor}"/>
-        </Border.LayoutTransform>
-        --><!-- 
-            The ToolTip is set using PROPERTY ELEMENT SYNTAX (<Border.ToolTip>...</Border.ToolTip>). 
-            It is NOT a content child. This is correct.
-        -->
-        
-
+    <Border Background="LightGray" BorderBrush="DimGray" BorderThickness="1">
         <!-- 
-            *** This Grid is the ONLY content element allowed inside the RulerContainer Border. ***
-            Padding="1" aligns Canvas with the inner border edges.
-        --><!--
-        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent">
-            --><!-- Only one row, taking up all available space --><!--
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+            MainCanvas is our logical workspace. 
+            Because of the LayoutTransform above, we only write logic for the X-axis.
+        -->
+        <Canvas x:Name="MainCanvas" >
 
-            --><!-- Ruler Content Area (Canvas is the content of the Grid row) -->
-            <!-- 
-                 The Margin="-0.5, 0, -0.5, 0" centers 1px wide ticks on the pixel boundary, 
-                 making the 0-tick and Max-tick visually flush with the side borders.
-            --><!--
-            <Canvas Grid.Row="0" x:Name="RulerCanvas" 
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    ClipToBounds="True"  
-                    IsHitTestVisible="True"                   
-                    PreviewMouseMove="RulerCanvas_PreviewMouseMove"
-                    PreviewMouseUp="RulerCanvas_PreviewMouseUp"
-                    PreviewMouseLeftButtonDown="RulerCanvas_PreviewMouseLeftButtonDown"
-                    PreviewMouseRightButtonDown="RulerCanvas_PreviewMouseRightButtonDown"
-                    Background="Transparent">
-                --><!--<Canvas.Style>
-                    <Style TargetType="Canvas">
-                        <Style.Triggers>
-                            <DataTrigger  Binding="{Binding IsVertical}" Value="True">
-                                <Setter Property="Margin" Value="0.5,-7,0.5,0" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsVertical}" Value="False">
-                                <Setter Property="Margin" Value="-0.5,0,-0.5,0" />
-                            </DataTrigger>
-                        </Style.Triggers>                     
-                    </Style>
-                </Canvas.Style>-->
-              
+            <!-- 1. The Ruler: Just ONE instance. Set internal Orientation to Horizontal. -->
+            <controls:RulerControl x:Name="RulerSurface"
+                UnitType="{Binding MeasurementUnit}"
+                ScaleFactor="{Binding ScaleFactor}"
+                Width="{Binding Width}" 
+                Height="{Binding Height}"/>
 
-                <!-- GUIDE LINE CONTAINER --><!--
-                <Border x:Name="GuideLineContainer"
-        Background="Yellow"  
-                    HorizontalAlignment="Left" 
-        VerticalAlignment="Top"
-                        IsHitTestVisible="False"
-        Visibility="{Binding IsGuideLineVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-        >
-                     --><!--Ensure it is on top of the ruler ticks--><!-- 
+            <!-- 2. The Guideline: Positioned via Canvas.Left (which becomes Y when rotated) -->
+            <Rectangle x:Name="Guideline" Fill="Red" Width="1" Height="{Binding Height}" 
+                       Canvas.Left="{Binding GuideLinePosition}" IsHitTestVisible="False"/>
 
-                    <Border.Style>
-                        <Style TargetType="{x:Type Border}">
-                            --><!-- 
-            ===================================================================
-            DEFAULT STATE: IsVertical = False (Horizontal Ruler) 
-            We need a VERTICAL line that moves on X.
-            ===================================================================
-            -->
+            <!-- 3. The Live Magnifier -->
+            <Canvas x:Name="MagnifierContainer" Canvas.Left="{Binding GuideLinePosition}"
+                    Visibility="{Binding MagnifierVisibility}">
 
-                             <!--Default Dimensions: Thin and tall (Vertical Line)--><!-- 
-                            <Setter Property="Width" Value="2"/>
-                            <Setter Property="Height" Value="{Binding ActualHeight, ElementName=RulerCanvas}"/>
+                <!-- 
+                    The Magnifier box needs to stay upright. 
+                    If the main canvas is rotated 90, we rotate this -90 to compensate.
+                -->
+                <Border x:Name="MagnifierVisual" Width="120" Height="70" Margin="-60,-80,0,0" 
+                        Background="White" BorderBrush="Black" BorderThickness="1" ClipToBounds="True">
+                    <Border.LayoutTransform>
+                        <RotateTransform Angle="{Binding RulerRotationAngle}"/>
+                    </Border.LayoutTransform>
 
-                             --><!--Default Transform: Moves along X-axis (Horizontal movement)--><!-- 
-                            <Setter Property="RenderTransform">
-                                <Setter.Value>
-                                     Uses GuideLinePosition for X movement 
-                                    <TranslateTransform X="{Binding GuideLinePosition}" Y="0"/>
-                                </Setter.Value>
-                            </Setter>
+                    <Grid>
+                        <!-- VisualBrush: Mirrors the actual pixels of the RulerSurface -->
+                        <Rectangle x:Name="MagnifierLens">
+                            <Rectangle.Fill>
+                                <VisualBrush Visual="{Binding ElementName=RulerSurface}" Stretch="None">
+                                    <VisualBrush.RelativeTransform>
+                                        <!-- Bind the scale directly to the MagnifierScale property -->
+                                        <ScaleTransform 
+                                            ScaleX="{Binding MagnifierScale}" 
+                                            ScaleY="{Binding MagnifierScale}" 
+                                            CenterX="0.5" 
+                                            CenterY="0.5"/>
+                                    </VisualBrush.RelativeTransform>
+                                </VisualBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
 
-                            <Style.Triggers>
-                                --><!-- 
-                ===================================================================
-                TRIGGER STATE: IsVertical = True (Vertical Ruler)
-                We need a HORIZONTAL line that moves on Y.
-                ===================================================================
-                --><!--
-                                <DataTrigger Binding="{Binding IsVertical}" Value="True">
-
-                                     --><!--1. Swap Dimensions: Make it a wide, short horizontal line--><!-- 
-                                    <Setter Property="Width" Value="{Binding ActualWidth, ElementName=RulerCanvas}"/>
-                                    <Setter Property="Height" Value="2"/>
-
-                                     --><!--2. Swap Transform: Make it move along the Y-axis (Vertical movement)--><!-- 
-                                    <Setter Property="RenderTransform">
-                                        <Setter.Value>
-                                             Uses GuideLinePosition for Y movement 
-                                            <TranslateTransform X="0" Y="{Binding GuideLinePosition}"/>
-                                        </Setter.Value>
-                                    </Setter>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
+                        <!-- Center Crosshair Line in the Magnifier -->
+                        <Line X1="60" Y1="0" X2="60" Y2="70" Stroke="Red" StrokeThickness="1"/>
+                    </Grid>
                 </Border>
-
-               
-
-                    --><!--<Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">-->
-                        <!--<Grid.RowDefinitions>
-                            <RowDefinition Height="35"/>
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="35"/>
-                        </Grid.RowDefinitions>
-                        --><!-- Columns are for Vertical Ruler Margins (Left/Right) --><!--
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="35"/>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="35"/>
-                        </Grid.ColumnDefinitions>--><!--
-
-               
-                    <controls:RulerControl 
-                                           UnitType="{Binding CurrentUnit}"
-                                           Orientation="{Binding RulerOrientation}"
-                                           Background="Red"
-                                           Height="{Binding Height}"
-                                           Width="{Binding Width}"
-                        IsHitTestVisible="True"
-                                           HorizontalAlignment="Stretch"
-                                           VerticalAlignment="Stretch">
-                        --><!-- Only show if the ruler is NOT vertical (i.e., it is horizontal) -->
-                        <!--<controls:RulerControl.Visibility>
-                            <Binding Path="IsVertical" Converter="{StaticResource BooleanToVisibilityConverter}" ConverterParameter="Invert"/>
-                        </controls:RulerControl.Visibility>--><!--
-                    </controls:RulerControl>
-
-
-                    --><!--<controls:RulerControl 
-                                   UnitType="{Binding CurrentUnit}"
-                                   Orientation="Vertical"
-                                   Width="{Binding Width}"
-                                   Height="{Binding Height}"
-                                   IsHitTestVisible="False"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch">
-                        <controls:RulerControl.Visibility>
-                            <Binding Path="IsVertical" Converter="{StaticResource BooleanToVisibilityConverter}"/>
-                        </controls:RulerControl.Visibility>
-                    </controls:RulerControl>-->
-
-
-                    <!--<controls:RulerControl Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                        UnitType="{Binding MeasurementUnit}"
-                        Orientation="Horizontal"
-                        Height="35"
-                        IsHitTestVisible="False"
-                                           Background="Blue">-->
-                        <!-- Only show if the ruler is NOT vertical (i.e., it is horizontal) --><!--
-                        <controls:RulerControl.Visibility>
-                            <Binding Path="IsVertical" Converter="{StaticResource BooleanToVisibilityConverter}" ConverterParameter="Invert"/>
-                        </controls:RulerControl.Visibility>
-                    </controls:RulerControl>
-
-
-                    <controls:RulerControl Grid.Column="2" Grid.Row="0" Grid.RowSpan="3"
-                        UnitType="{Binding MeasurementUnit}"
-                        Orientation="Vertical"
-                        Width="35"
-                        Margin="0,7,0,0"
-                        IsHitTestVisible="False"
-                                           Background="Green">
-                        --><!-- Only show if the ruler IS vertical --><!--
-                        <controls:RulerControl.Visibility>
-                            <Binding Path="IsVertical" Converter="{StaticResource BooleanToVisibilityConverter}"/>
-                        </controls:RulerControl.Visibility>
-                    </controls:RulerControl>-->
-
-
-
-                <!--</Grid>--><!--
             </Canvas>
-        </Grid>
-    </Border>-->
-  
+        </Canvas>
+    </Border>  
 </Window>

@@ -12,350 +12,163 @@ using System.Windows.Shapes;
 namespace Ruler.Wpf.Controls
 {
     /// <summary>
-    /// Interaction logic for RulerControls.xaml
+    /// A high-performance ruler control that uses a Strategy pattern to handle 
+    /// different measurement units (Pixels, Inches, CM, etc.).
     /// </summary>
     public partial class RulerControl : UserControl
     {
-        private const double DipPerInch = 96.0;
-        private IUnitStrategy _unitStrategy = new PixelUnitStrategy();
-    
+        private const double BaseDpi = 96.0;
+        private IUnitStrategy _unitStrategy = new InchUnitStrategy();
+
+        #region Dependency Properties
+
+        /// <summary>
+        /// The type of measurement unit to display.
+        /// Fixed: Explicit cast (MeasurementUnit) prevents type mismatch ArgumentException.
+        /// </summary>
+        public static readonly DependencyProperty UnitTypeProperty =
+            DependencyProperty.Register(
+                nameof(UnitType),
+                typeof(MeasurementUnit),
+                typeof(RulerControl),
+                new FrameworkPropertyMetadata(
+                    (MeasurementUnit)MeasurementUnit.Pixels,
+                    FrameworkPropertyMetadataOptions.AffectsRender,
+                    OnRulerPropertyChanged));
+
+        public MeasurementUnit UnitType
+        {
+            get => (MeasurementUnit)GetValue(UnitTypeProperty);
+            set => SetValue(UnitTypeProperty, value);
+        }
+
+        /// <summary>
+        /// Combined scaling factor (System DPI * Application Zoom).
+        /// </summary>
+        public static readonly DependencyProperty ScaleFactorProperty =
+            DependencyProperty.Register(
+                nameof(ScaleFactor),
+                typeof(double),
+                typeof(RulerControl),
+                new FrameworkPropertyMetadata(
+                    1.0,
+                    FrameworkPropertyMetadataOptions.AffectsRender,
+                    OnRulerPropertyChanged));
+
+        public double ScaleFactor
+        {
+            get => (double)GetValue(ScaleFactorProperty);
+            set => SetValue(ScaleFactorProperty, value);
+        }
+
+        #endregion
 
         public RulerControl()
         {
             InitializeComponent();
-            this.Loaded += (s, e) => DrawRuler();
-            this.SizeChanged += (s,  e) => {
-                DrawRuler();
-            };
-            this.Loaded += (s, e) => {              
-                DrawRuler();
-            };
-       
-        }
-        #region Dependency Properties
-
-        public static readonly DependencyProperty ScaleFactorProperty =
-           DependencyProperty.Register(nameof(ScaleFactor), typeof(double), typeof(RulerControl),
-               new FrameworkPropertyMetadata(1.0, FrameworkPropertyMetadataOptions.AffectsRender, OnRulerPropertyChanged));
-
-        public static readonly DependencyProperty OrientationProperty =
-            DependencyProperty.Register(nameof(Orientation), typeof(Orientation), typeof(RulerControl),
-                new FrameworkPropertyMetadata(Orientation.Horizontal, FrameworkPropertyMetadataOptions.AffectsRender, OnRulerPropertyChanged));
-
-        public static readonly DependencyProperty UnitTypeProperty =
-            DependencyProperty.Register(nameof(UnitType), typeof(MeasurementUnit), typeof(RulerControl),
-                new FrameworkPropertyMetadata(MeasurementUnit.Inches, FrameworkPropertyMetadataOptions.AffectsRender, OnRulerPropertyChanged));
-
-
-        public MeasurementUnit UnitType
-        {
-            get { return (MeasurementUnit)GetValue(UnitTypeProperty); }
-            set { SetValue(UnitTypeProperty, value); }
-        }
-
-        private static void OnUnitTypeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            if (d is RulerControl control && e.NewValue is MeasurementUnit newUnit)
+            this.Loaded += (s, e) => 
             {
-                control.SetUnitStrategy(newUnit);
-                control.DrawRuler();
-            }
+                UpdateStrategy();
+                DrawRuler();
+            };
+            this.SizeChanged += (s, e) => DrawRuler();
         }
-        private static void OnRulerPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs baseValue)
+
+        private static void OnRulerPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is RulerControl control)
             {
-                if (d.GetValue(UnitTypeProperty) is MeasurementUnit newUnit)
-                {
-                    control.SetUnitStrategy(newUnit);
-                }
-                else if (d.GetValue(ScaleFactorProperty) is double newScale)
-                {
-                    control.SetScaleFactor(newScale);
-                }
-                else if (d.GetValue(OrientationProperty) is Orientation newOrientation)
-                {
-                    control.SetOrientation(newOrientation);
-                }
+                control.UpdateStrategy();
                 control.DrawRuler();
             }
-           
         }
 
-
-        private double ScaleFactor
+        /// <summary>
+        /// Updates the internal strategy based on the UnitType property.
+        /// </summary>
+        private void UpdateStrategy()
         {
-            get { return (double)GetValue(ScaleFactorProperty); }
-            set { SetValue(ScaleFactorProperty, value); }
-        }
-
-        public Orientation Orientation
-        {
-            get { return (Orientation)GetValue(OrientationProperty); }
-            set { SetValue(OrientationProperty, value); }
-        }
-        private void SetOrientation(Orientation orientation)
-        {
-            Orientation = orientation;
-        }
-        private void SetScaleFactor(double scale)
-        {
-            ScaleFactor = scale;
-        }
-        #endregion
-
-        private void SetUnitStrategy(MeasurementUnit unit)
-        {
-            switch (unit)
+            switch (UnitType)
             {
-                case MeasurementUnit.Inches: _unitStrategy = new InchUnitStrategy(); break;
-                case MeasurementUnit.Millimeters: _unitStrategy = new MillimeterUnitStrategy(); break;
-                case MeasurementUnit.Centimeters: _unitStrategy = new CentimeterUnitStrategy(); break;
-                case MeasurementUnit.Pixels: _unitStrategy = new PixelUnitStrategy(); break;
-                case MeasurementUnit.Points: _unitStrategy = new PointUnitStrategy(); break;
-                default: _unitStrategy = new PixelUnitStrategy(); break;
+                case MeasurementUnit.Inches:
+                    _unitStrategy = new InchUnitStrategy();
+                    break;
+                case MeasurementUnit.Centimeters:
+                    _unitStrategy = new CentimeterUnitStrategy();
+                    break;
+                case MeasurementUnit.Millimeters:
+                    _unitStrategy = new MillimeterUnitStrategy();
+                    break;
+                case MeasurementUnit.Points:
+                    _unitStrategy = new PointUnitStrategy();
+                    break;
+                case MeasurementUnit.Pixels:
+                default:
+                    _unitStrategy = new PixelUnitStrategy();
+                    break;
             }
+
+            // Sync the static scale factor for compensated strategies
+            if (_unitStrategy is PixelUnitStrategy) PixelUnitStrategy.SystemScaleFactor = ScaleFactor;
+            if (_unitStrategy is PointUnitStrategy) PointUnitStrategy.SystemScaleFactor = ScaleFactor;
         }
 
-        private void DrawRuler()
+        /// <summary>
+        /// Main drawing loop. Generates a GeometryGroup for the Path and populates Labels.
+        /// Logic assumes a Horizontal orientation; MainWindow's LayoutTransform handles rotation.
+        /// </summary>
+        public void DrawRuler()
         {
-            if (LabelsPanel == null || RulerPath == null) return;
+            // RulerPath and LabelsPanel are expected to be defined in RulerControl.xaml
+            if (RulerPath == null || LabelsPanel == null || ActualWidth <= 0 || ActualHeight <= 0)
+                return;
 
             LabelsPanel.Children.Clear();
-            double depth = Orientation == Orientation.Horizontal ? ActualHeight : ActualWidth;
-            double length = Orientation == Orientation.Horizontal ? ActualWidth : ActualHeight;
 
-            if (depth <= 0 || length <= 0) return;
+            double length = ActualWidth;
+            double depth = ActualHeight;
 
             GeometryGroup group = new GeometryGroup();
-            double effectiveDpi = DipPerInch * ScaleFactor;
+            double effectiveDpi = BaseDpi * (ScaleFactor > 0 ? ScaleFactor : 1.0);
 
-            double smallestUnitDip = _unitStrategy.GetSmallestUnitDip(effectiveDpi);
+            double smallestUnit = _unitStrategy.GetSmallestUnitDip(effectiveDpi);
             double majorUnitDip = _unitStrategy.GetMajorUnitDip(effectiveDpi);
 
-            if (smallestUnitDip <= 0) return;
+            if (smallestUnit <= 0) return;
 
-            RulerPath.SnapsToDevicePixels = true;
-
-            // FIX: Use an integer loop for ticks to avoid cumulative floating point errors
-            int totalSteps = (int)Math.Ceiling(length / smallestUnitDip);
-
-            for (int i = 0; i <= totalSteps; i++)
+            int majorIndex = 0;
+            for (double pos = 0; pos <= length; pos += smallestUnit)
             {
-                double pos = i * smallestUnitDip;
-                if (pos > length + 0.001) break;
-
                 double tickLen = _unitStrategy.GetTickLength(pos, effectiveDpi, depth);
 
-                group.Children.Add(new LineGeometry(GetStartPoint(pos, depth, false), GetEndPoint(pos, tickLen, depth, false)));
+                // Top ticks
+                group.Children.Add(new LineGeometry(
+                    new Point(pos + 0.5, 0),
+                    new Point(pos + 0.5, tickLen)));
 
+                // Bottom ticks (if ruler depth allows for double-sided display)
                 if (depth > 40)
-                    group.Children.Add(new LineGeometry(GetStartPoint(pos, depth, true), GetEndPoint(pos, tickLen, depth, true)));
-
-                // FIX: Check if this step corresponds to a Major Unit (e.g. 1cm, 2cm)
-                // We calculate how many "smallest units" fit into one "major unit"
-                double stepsPerMajor = majorUnitDip / smallestUnitDip;
-
-                // Use a small epsilon check on the step index to identify major marks
-                if (Math.Abs(i % stepsPerMajor) < 0.001 || Math.Abs((i % stepsPerMajor) - stepsPerMajor) < 0.001)
                 {
-                    int majorIndex = (int)Math.Round(i / stepsPerMajor);
-                    if (majorIndex > 0)
-                    {
-                        AddLabel(pos, majorIndex);
-                    }
+                    group.Children.Add(new LineGeometry(
+                        new Point(pos + 0.5, depth),
+                        new Point(pos + 0.5, depth - tickLen)));
                 }
 
-                RulerPath.Data = group;
+                // Check if we are at a major unit position to add a label
+                // Using a small epsilon to handle floating point precision
+                if (Math.Abs(pos % majorUnitDip) < (smallestUnit / 2.0))
+                {
+                    AddLabel(pos, tickLen, depth, majorIndex);
+                    majorIndex++;
+                }
             }
-        }
-            //double availableWidth = ActualWidth;
-            //double availableHeight = ActualHeight;          
-            //if (_unitStrategy == null) SetUnitStrategy(UnitType);
-            //if (LabelsPanel == null || RulerPath == null || availableWidth <= 0 || availableHeight <= 0) return;
-            //LabelsPanel.Children.Clear();
 
-            //bool isHorizontal = Orientation == Orientation.Horizontal;
-            //double totalLength = isHorizontal ? availableWidth : availableHeight;
-            //double totalDepth = isHorizontal ? availableHeight : availableWidth;
-
-
-            //// FIX: Use GeometryGroup instead of a single PathFigure with PolyLineSegment.
-            //// This prevents the diagonal lines connecting the end of one tick to the start of the next.
-            //GeometryGroup combinedGeometry = new GeometryGroup();
-            //double effectiveDpi = DipPerInch * ScaleFactor;
-
-            //double step = _unitStrategy.GetSmallestUnitDip(effectiveDpi);
-            //double majorUnitDip = _unitStrategy.GetMajorUnitDip(effectiveDpi);
-
-            //if (step <= 0) return;
-            //double offset = 0.5;
-
-            //if (totalLength <= 0 || totalDepth <= 0) return;
-
-            //for (double pos = 0; pos <= totalLength; pos += step)
-            //{
-            //    double tickLen = _unitStrategy.GetTickLength(pos, effectiveDpi, totalDepth);
-
-            //    combinedGeometry.Children.Add(CreateTickGeometry(pos, tickLen, totalDepth, offset, false));
-
-            //    if (totalDepth > 40)
-            //        combinedGeometry.Children.Add(CreateTickGeometry(pos, tickLen, totalDepth, offset, true));
-
-            //    if (Math.Abs(pos % majorUnitDip) < 0.001)
-            //    {
-            //        AddLabel(pos, tickLen, totalDepth, isHorizontal, effectiveDpi);
-            //    }
-            //}
-
-            //RulerPath.Data = combinedGeometry;
-
-            //for (double i = 0; i <= totalLength; i += step)
-            //{
-            //    double tickLength = _unitStrategy.GetTickLength(i, DipPerInch, totalDepth);
-
-            //    if (tickLength > 0)
-            //    {
-            //        // Primary side tick
-            //        combinedGeometry.Children.Add(new LineGeometry(
-            //            GetStartPoint(i, rulerDepth, false),
-            //            GetEndPoint(i, tickLength, rulerDepth, false)));
-
-            //        // Mirrored side tick (opposite edge)
-            //        combinedGeometry.Children.Add(new LineGeometry(
-            //            GetStartPoint(i, rulerDepth, true),
-            //            GetEndPoint(i, tickLength, rulerDepth, true)));
-
-            //        // Add Labels for Major Units
-            //        if (Math.Abs(i % majorUnitDip) < 0.001 || Math.Abs((i % majorUnitDip) - majorUnitDip) < 0.001)
-            //        {
-            //            AddLabel(i, rulerDepth, false);
-
-            //            // Only add mirrored labels if there is enough space
-            //            if (rulerDepth >= 90)
-            //            {
-            //                AddLabel(i, rulerDepth, true);
-            //            }
-            //        }
-            //    }
-            //}
-
-            //   RulerPath.Data = combinedGeometry;
-            //// Draw primary side
-            //DrawTicksForSide(combinedGeometry, rulerLength, rulerDepth, false);
-
-            //// Draw mirrored side if enough space
-            //if (rulerDepth > 30)
-            //{
-            //    DrawTicksForSide(combinedGeometry, rulerLength, rulerDepth, true);
-            //}
-
-            //RulerPath.Data = combinedGeometry;
-        
-        private LineGeometry CreateTickGeometry(double pos, double tickLen, double depth, double offset, bool mirrored)
-        {
-            if (Orientation == Orientation.Horizontal)
-            {
-                double y1 = mirrored ? depth - offset : offset;
-                double y2 = mirrored ? depth - tickLen : tickLen;
-                return new LineGeometry(new Point(pos + offset, y1), new Point(pos + offset, y2));
-            }
-            else
-            {
-                double x1 = mirrored ? depth - offset : offset;
-                double x2 = mirrored ? depth - tickLen : tickLen;
-                return new LineGeometry(new Point(x1, pos + offset), new Point(x2, pos + offset));
-            }
+            RulerPath.Data = group;
         }
 
-        //private void AddLabel(double pos, double tickLen, double depth, bool isHorizontal, double dpi)
-        //{
-        //    double majorUnitDip = _unitStrategy.GetMajorUnitDip(dpi);
-        //    int index = (int)Math.Round(pos / majorUnitDip);
-
-        //    TextBlock label = new TextBlock
-        //    {
-        //        Text = _unitStrategy.GetLabelText(index),
-        //        FontSize = 10,
-        //        Foreground = Brushes.Black,
-        //        IsHitTestVisible = false
-        //    };
-
-        //    if (isHorizontal)
-        //    {
-        //        Canvas.SetLeft(label, pos + 2);
-        //        Canvas.SetTop(label, tickLen + 2);
-        //    }
-        //    else
-        //    {
-        //        Canvas.SetTop(label, pos + 2);
-        //        Canvas.SetLeft(label, tickLen + 2);
-        //        label.RenderTransform = new RotateTransform(90);
-        //    }
-
-        //    LabelsPanel.Children.Add(label);
-        //}
-
-        //private void AddLabel(double position, double rulerDepth, bool isMirrored)
-        //{
-        //    double majorUnitDip = _unitStrategy.GetMajorUnitDip(DipPerInch);
-        //    int majorIndex = (int)Math.Round(position / majorUnitDip);
-
-        //    if (majorIndex == 0) return;
-
-        //    string labelText = _unitStrategy.GetLabelText(majorIndex);
-        //    double majorTickLength = _unitStrategy.MajorTickLengthDip(rulerDepth);
-
-        //    // Dynamic offset calculation based on depth
-        //    double labelOffset = rulerDepth < 90 ? 8.0 : (rulerDepth > 150 ? 15.0 : 5.0);
-
-        //    TextBlock label = new TextBlock
-        //    {
-        //        Text = labelText,
-        //        FontSize = Math.Max(8, Math.Min(10, rulerDepth / 4 + 2)),
-        //        Foreground = Brushes.Black,
-        //        FontFamily = new FontFamily("Segoe UI")
-        //    };
-
-        //    if (Orientation == Orientation.Horizontal)
-        //    {
-        //        Canvas.SetLeft(label, position + 2);
-        //        if (!isMirrored)
-        //            Canvas.SetTop(label, majorTickLength + labelOffset);
-        //        else
-        //            Canvas.SetTop(label, rulerDepth - majorTickLength - labelOffset - 14);
-        //    }
-        //    else
-        //    {
-        //        Canvas.SetTop(label, position + 2);
-        //        if (!isMirrored)
-        //            Canvas.SetLeft(label, majorTickLength + labelOffset);
-        //        else
-        //            Canvas.SetLeft(label, rulerDepth - majorTickLength - labelOffset - 25);
-        //    }
-
-        //    LabelsPanel.Children.Add(label);
-        //}
-
-        //private Point GetStartPoint(double position, double rulerDepth, bool isMirrored)
-        //{
-        //    if (Orientation == Orientation.Horizontal)
-        //        return new Point(position, isMirrored ? rulerDepth : 0);
-        //    return new Point(isMirrored ? rulerDepth : 0, position);
-        //}
-
-        //private Point GetEndPoint(double position, double length, double rulerDepth, bool isMirrored)
-        //{
-        //    if (Orientation == Orientation.Horizontal)
-        //    {
-        //        return isMirrored ? new Point(position, rulerDepth - length) : new Point(position, length);
-        //    }
-        //    return isMirrored ? new Point(rulerDepth - length, position) : new Point(length, position);
-        //}
-
-        private void AddLabel(double position, int majorIndex)
+        private void AddLabel(double pos, double tickLen, double depth, int majorIndex)
         {
-            TextBlock label = new TextBlock
+            var label = new TextBlock
             {
                 Text = _unitStrategy.GetLabelText(majorIndex),
                 FontSize = 10,
@@ -363,34 +176,10 @@ namespace Ruler.Wpf.Controls
                 IsHitTestVisible = false
             };
 
-            if (Orientation == Orientation.Horizontal)
-            {
-                Canvas.SetLeft(label, position + 2);
-                Canvas.SetTop(label, 18);
-            }
-            else
-            {
-                Canvas.SetTop(label, position + 2);
-                Canvas.SetLeft(label, 18);
-                label.RenderTransform = new RotateTransform(90);
-            }
+            // Positioning: Slightly offset from the major tick
+            Canvas.SetLeft(label, pos + 2);
+            Canvas.SetTop(label, tickLen + 1);
             LabelsPanel.Children.Add(label);
-        }
-
-        private Point GetStartPoint(double position, double rulerDepth, bool isMirrored)
-        {
-            double offset = 0.5;
-            return (Orientation == Orientation.Horizontal)
-                ? new Point(position + offset, isMirrored ? rulerDepth - offset : offset)
-                : new Point(isMirrored ? rulerDepth - offset : offset, position + offset);
-        }
-
-        private Point GetEndPoint(double position, double length, double rulerDepth, bool isMirrored)
-        {
-            double offset = 0.5;
-            if (Orientation == Orientation.Horizontal)
-                return isMirrored ? new Point(position + offset, rulerDepth - length) : new Point(position + offset, length);
-            return isMirrored ? new Point(rulerDepth - length, position + offset) : new Point(length, position + offset);
         }
     }
 }

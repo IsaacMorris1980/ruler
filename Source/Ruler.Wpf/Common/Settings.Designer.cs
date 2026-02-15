@@ -178,5 +178,29 @@ namespace Ruler.Wpf.Common {
                 this["top"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("{}")]
+        public string RulerSettingsJson {
+            get {
+                return ((string)(this["RulerSettingsJson"]));
+            }
+            set {
+                this["RulerSettingsJson"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("{}")]
+        public string MonitorProfilesJson {
+            get {
+                return ((string)(this["MonitorProfilesJson"]));
+            }
+            set {
+                this["MonitorProfilesJson"] = value;
+            }
+        }
     }
 }

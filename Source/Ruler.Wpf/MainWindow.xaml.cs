@@ -10,6 +10,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace Ruler.Wpf
 {
@@ -20,497 +21,111 @@ namespace Ruler.Wpf
     {
         private RulerViewModel _viewModel;
         private ILoggingService _loggingService;
+        private IEnvironmentService _environmentService;
         // Points used for calculating delta movements.
         private Point _startPoint;
         // Flag to track if a drag operation has started
         private bool _isDragging = false;
         private bool _isGuidelineLocked = false;
+       
 
-        public MainWindow(RulerViewModel viewModel, ILoggingService loggingService)
+        public MainWindow(RulerViewModel viewModel,IEnvironmentService service)
         {
             InitializeComponent();
-            this.Loaded += MainWindow_Loaded;
             this.SourceInitialized += MainWindow_SourceInitialized;
             this.DataContext = viewModel;
             _viewModel = viewModel;
-            _loggingService = loggingService;
-            this.Loaded += MainWindow_Loaded;
-            NativeMethods.RECT rulerarea = GetWindowRectFromWpf();
-            bool isVisible = IsWindowVisible(rulerarea);
-            if (!isVisible)
-            {
-                _loggingService.LogInfo("Ruler is NOT visible on any monitor.");
-                _viewModel.DisplayedLocation = new Point(0, 0);
-                _viewModel.Left = 0;
-                _viewModel.Top = 0;
-            }
-            _viewModel.PropertyChanged += ViewModel_PropertyChanged;
-            this.MouseLeftButtonDown += (s, e) =>
-            {
-                if (e.ChangedButton == MouseButton.Left && !_isGuidelineLocked)
-                    this.DragMove();
-            };
-        }
-        private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            // When AutoScale is enabled via the menu, calculate and apply the system scale factor.
-            if (e.PropertyName == nameof(RulerViewModel.IsAutoScaled) && _viewModel.IsAutoScaled)
-            {
-                ApplySystemDpiScale();
-            }
-        }
-        private void ApplySystemDpiScale()
-        {
-            // Use PresentationSource to reliably get DPI scaling in WPF
-            if (PresentationSource.FromVisual(this) is HwndSource source)
-            {
-                // M11 is the X-axis scaling factor (e.g., 1.25 for 125%)
-                double dpiScaleFactor = source.CompositionTarget.TransformToDevice.M11;
-
-                // Push the system DPI scale to the ViewModel
-                _viewModel.SetAutoScaleFactor(dpiScaleFactor);
-            }
-        }
-
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-
-                if (this.DataContext is RulerViewModel viewModel && !viewModel.IsInitialized)
-                {
-                    _viewModel.UpdateSystemDpi(this);
-                    this.LocationChanged -= Window_LocationChanged;
-                    //  ApplyDpiAwareMarginFix();
-                    // Set the initialization flag
-
-                    _viewModel = this.DataContext as RulerViewModel;
-                    Console.WriteLine($"Width: {this.Width}, Height: {this.Height}");
-                    Console.WriteLine($"RulerViewModel Width: {viewModel.Width}, Height: {viewModel.Height}");
-                    _loggingService.LogInfo("MainWindow loaded. Initializing size and position.");
-                    // Use the ViewModel's stored DIU values directly.
-                    // WPF handles the DPI scaling automatically.
-
-                    this.Left = viewModel.Left;
-                    this.Top = viewModel.Top;
+            _environmentService = service;
 
 
-                    viewModel.IsInitialized = true;
-                    this.LocationChanged += Window_LocationChanged;
-                    Console.WriteLine($"Canvas Actual Height: {RulerGrid.ActualHeight}, Actual Width: {RulerGrid.ActualWidth}");
 
-                }
-            }
-            catch (Exception ex)
-            {
-                var a = ex.Message;
-            }
-            _isFullyLoaded = true;
 
         }
-
         private void MainWindow_SourceInitialized(object sender, EventArgs e)
         {
-            // Get the window handle and set up the message loop override
-            WindowInteropHelper helper = new WindowInteropHelper(this);
-            HwndSource source = HwndSource.FromHwnd(helper.Handle);
-            // 1. Hook up the window message handler for drag, lock, and move events
-            source?.AddHook(HwndHook);
-            source?.AddHook(WndProc);
-            // 2. Subscribe to the DpiChanged event to fix the vertical ruler margin when the DPI changes
-            //  source.DpiChanged += Source_DpiChanged;
-        }
-        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+            _environmentService.RegisterWindow(
+     this,
+     // moveCallback: Updates whenever the window moves
+     moveCallback:(x, y) =>
+     {
+         _viewModel.Left = x;
+         _viewModel.Top = y;
+     },
+     dpiCallback:(dpi) =>
+     {
+         if (_viewModel.IsAutoScaled)
+         {
+             _viewModel.ScaleFactor = dpi;
+         }
+     },
+     isLockedPredicate:() => _viewModel.IsLocked,
+     onRightClicked:(x, y) => { ShowMenu?.ShowAt(x, y, this); },
+    onMenuButtonPressed:(x, y) => { ShowMenu?.ShowAt(x, y, this); },
+     onTap:(double x) => { _viewModel.SetGuideLinePosition(x); },
+     resizeCallback:(width, height) =>
         {
-            if (msg == NativeMethods.WM_MOVE || msg == NativeMethods.WM_WINDOWPOSCHANGED)
-            {
-                Window window = (Window)HwndSource.FromHwnd(hwnd).RootVisual;
-                if (window != null)
-                {
-                    _viewModel.UpdateSystemDpi(this);
-                    // This is the custom method that fixes the location reporting issue
-                    GetDIPLocationFromWin32Rect(hwnd, window);
-                }
-            }
+            _viewModel.Width = width;
+            _viewModel.Height = height;
+        },
+    // NEW: monitorCallback (IntPtr hMonitor)
+    monitorChangedCallback:(hMonitor) => {
+        // This is where you handle logic specific to entering a new monitor
+        // e.g., checking if the new monitor is ultra-wide, or updating
+        // the ViewModel's "current monitor" bounds for snapping.
+        var dpi = _environmentService.GetDpiScale(hMonitor);
 
-            return IntPtr.Zero;
-        }
 
-        private void GetDIPLocationFromWin32Rect(IntPtr hwnd, Window window)
+        if (dpi != 0.0)
         {
-            // 1. Get the window's physical location in screen pixels using the native GetWindowRect
-            if (Ruler.Wpf.Common.NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT rect))
-            {
-                HwndSource source = PresentationSource.FromVisual(window) as HwndSource;
-
-                if (source != null)
-                {
-                    // 2. Get the Transformation Matrix (Device Pixels -> DIPs)
-                    if (source.CompositionTarget != null)
-                    {
-                        // TransformFromDevice maps screen pixels to WPF units (DIPs)
-                        Matrix matrix = source.CompositionTarget.TransformFromDevice;
-
-                        // 3. Apply the transformation matrix to the Left/Top pixel coordinates
-                        Point locationInDIP = matrix.Transform(new Point(rect.Left, rect.Top));
-
-                        double actualLeft = locationInDIP.X;
-                        double actualTop = locationInDIP.Y;
-
-
-                        // 4. Manually write the corrected position back to the ViewModel properties.
-                        _viewModel.UpdateLocation(actualLeft, actualTop);
-                    }
-                }
-                // Fallback in case HwndSource is not available
-                else
-                {
-                    Console.WriteLine($"HwndSource not found. Falling back to WPF: Left={window.Left}, Top={window.Top}");
-                    _viewModel.UpdateLocation(window.Left, window.Top);
-                }
-            }
+            _viewModel.SystemDpiScale = dpi;
         }
-        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            if (msg == NativeMethods.WM_NCHITTEST)
+        _viewModel.OnMonitorChanged(hMonitor);
+    },
+    isPhysicalPredicate:()=>_viewModel.IsPhysicalUnits
+);
+
+            this.Closed += (s, args) =>
             {
-                if (_viewModel != null && _viewModel.IsLocked)
-                {
-                    // 4. Override the result to HTCAPTION (2). 
-                    // This tells Windows to treat the mouse click as a drag action,
-                    // disabling the resize but allowing the window to be moved.
-                    handled = true;
-                    return new IntPtr(Ruler.Wpf.Common.NativeMethods.HTCAPTION);
-                }
-
-
-                // If not locked, or not over a resize area, return the original result.
-                return IntPtr.Zero;
-            }
-
-            // Return 0 for default processing for all other messages
-            return IntPtr.Zero;
-        }
-        private bool _isFullyLoaded = false;
-        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (!_isFullyLoaded || _viewModel is null)
-            {
-                return;
-            }
-            _viewModel.SetRulerDimensions(e.NewSize.Width, e.NewSize.Height);
-        }
-
-        private void Window_LocationChanged(object sender, EventArgs e)
-        {
-            if (_viewModel != null)
-            {
-                Window window = (Window)sender;
-
-
-                IntPtr windowHandle = new WindowInteropHelper(window).Handle;
-
-                // 1. Call the native Windows API to get the true screen position in pixels
-                if (Ruler.Wpf.Common.NativeMethods.GetWindowRect(windowHandle, out NativeMethods.RECT rect))
-                {
-                    // 2. Convert the Win32 pixel coordinates to WPF's Device Independent Pixels (DIPs)
-                    PresentationSource source = PresentationSource.FromVisual(window);
-
-                    if (source != null && source.CompositionTarget != null)
-                    {
-                        Matrix matrix = source.CompositionTarget.TransformFromDevice;
-
-                        // Apply the transformation matrix to the Left/Top pixel coordinates
-                        Point locationInDIP = matrix.Transform(new Point(rect.Left, rect.Top));
-
-                        double actualLeft = locationInDIP.X;
-                        double actualTop = locationInDIP.Y;
-
-                        // 3. Manually write the window's current screen position back to the ViewModel properties.
-                        _viewModel.UpdateLocation(actualLeft, actualTop);
-                        //_viewModel.LocationX = actualLeft;
-                        //_viewModel.LocationY = actualTop;
-
-                    }
-                }
-                // If the Win32 call fails, fall back to WPF properties (will likely still be 0/78)
-                else
-                {
-                    Console.WriteLine($"Win32 API Failed. Falling back to WPF: Left={window.Left}, Top={window.Top}");
-                    _viewModel.UpdateLocation(window.Left, window.Top);
-                    //_viewModel.LocationX = window.Left;
-                    //_viewModel.LocationY = window.Top;
-                }
-            }
-            if (_viewModel.IsAutoScaled)
-            {
-                ApplySystemDpiScale();
-            }
-        }
-        private const int MONITOR_DEFAULTTONULL = 0x00000000;
-
-        private static bool IsWindowVisible(Ruler.Wpf.Common.NativeMethods.RECT rect)
-        {
-            // MonitorFromRect returns a handle (IntPtr) to the display monitor
-            // that intersects the rectangle. We use MONITOR_DEFAULTTONULL (0)
-            // so it returns NULL if the rectangle does not intersect any display monitor.
-            IntPtr monitorHandle = NativeMethods.MonitorFromRect(ref rect, MONITOR_DEFAULTTONULL);
-
-            // If the handle is not zero (NULL), a monitor was found, meaning the window is visible.
-            return monitorHandle != IntPtr.Zero;
-        }
-
-        /// <summary>
-        /// Helper to convert WPF position/size to native RECT.
-        /// </summary>
-        private NativeMethods.RECT GetWindowRectFromWpf()
-        {
-            return new NativeMethods.RECT
-            {
-                Left = (int)this.Left,
-                Top = (int)this.Top,
-                Right = (int)(this.Left + this.Width),
-                Bottom = (int)(this.Top + this.Height)
+                this.SourceInitialized -= MainWindow_SourceInitialized;
             };
         }
+        private bool _isFullyLoaded = false;
 
-        private void RulerGrid_PreviewMouseMove(object sender, MouseEventArgs e)
-        {
-            //if (_isGuidelineLocked) return;
-
-            Point mousePos = e.GetPosition(RulerGrid);
-            //UpdateGuideline(mousePos);
-            if (!_isGuidelineLocked)
-            {
-                GlobalGuideline.Visibility = Visibility.Visible;
-                Canvas.SetLeft(GlobalGuideline, mousePos.X);    
-            }
-            else
-            {
-                GlobalGuideline.Visibility = Visibility.Collapsed;
-            }
-
-
-            if (_viewModel.IsMagnifierEnabled)
-            {
-                UpdateMagnifier(mousePos);
-            }
-            else
-            {
-                HideMagnifier();
-            }
-        }
-
-        private void RulerGrid_PreviewMouseUp(object sender, MouseButtonEventArgs e)
-        {
-            RulerGrid.ReleaseMouseCapture();
-            if (!_isDragging)
-            {
-                Point clickPoint = e.GetPosition(RulerGrid);
-                double position;
-                if (_viewModel.IsVertical)
-                {
-                    position = clickPoint.Y;
-                }
-                else
-                {
-                    position = clickPoint.X;
-                }
-                // Update the ViewModel's guide line property
-                _viewModel.SetGuideLinePosition(position);
-                // Also ensure the line is visible
-                _viewModel.IsGuideLineVisible = true;
-            }
-
-        }
-        private void RulerGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                Point clickPos = e.GetPosition(RulerGrid);
-
-                // Toggle Lock State
-                _isGuidelineLocked = !_isGuidelineLocked;
-
-                if (_isGuidelineLocked)
-                {
-                    // LOCKING: Move Blue Line to click position and show it
-                    LockedGuideline.Visibility = Visibility.Visible;
-                    Canvas.SetLeft(LockedGuideline, clickPos.X);
-
-                    // Hide the tracking Red Line
-                    GlobalGuideline.Visibility = Visibility.Collapsed;
-                }
-                else
-                {
-                    // UNLOCKING: Hide Blue Line, bring back Red Line
-                    LockedGuideline.Visibility = Visibility.Collapsed;
-                    GlobalGuideline.Visibility = Visibility.Visible;
-                }
-            }
-        }
-        //private void UpdateGuideline(Point pos)
-        //{
-        //    if (_isGuidelineLocked)
-        //    {
-        //        return;
-        //    }
-        //    if (_viewModel.RulerOrientation == Orientation.Horizontal)
-        //    {
-        //        // Center the 2px guideline on the mouse cursor
-        //        GuidelineTransform.X = pos.X - 1;
-        //        GuidelineTransform.Y = 0;
-        //    }
-        //    else
-        //    {
-        //        GuidelineTransform.X = 0;
-        //        GuidelineTransform.Y = pos.Y - 1;
-        //    }
-        //}
         private void UpdateMagnifier(Point pos)
         {
-            if (MainRuler == null || MagnifierEllipse == null || MagnifierBrush == null) return;
-
-            // 1. Source: Target the Ruler only (excludes the tracking red line)
-            if (MagnifierBrush.Visual != MainRuler)
-            {
-                MagnifierBrush.Visual = MainRuler;
-            }
-
-            double rulerHeight = MainRuler.ActualHeight;
+            if (RulerSurface == null || MagnifierVisual == null || MagnifierLens == null) return;
+            double rulerHeight = RulerSurface.ActualHeight;
             double magnifierSize = rulerHeight;
-            MagnifierEllipse.Width = magnifierSize;
-            MagnifierEllipse.Height = rulerHeight;
+            MagnifierVisual.Width = magnifierSize;
+            MagnifierVisual.Height = rulerHeight;
 
             // 2. Position the lens
             double lensLeft = pos.X - (magnifierSize / 2);
-            Canvas.SetLeft(MagnifierEllipse, lensLeft);
-            Canvas.SetTop(MagnifierEllipse, 0);
+            Canvas.SetLeft(MagnifierVisual, lensLeft);
+            Canvas.SetTop(MagnifierVisual, 0);
 
             // 3. The Red Center Line (The "pointer" for the mouse)
-            if (MagnifierLine != null)
-            {
-                MagnifierLine.Stroke = Brushes.Red;
-                Canvas.SetLeft(MagnifierLine, pos.X);
-                MagnifierLine.Height = rulerHeight;
-                MagnifierLine.Visibility = Visibility.Visible;
-            }
+           
 
             // 4. Configure Zoom Math
             double zoomFactor = 2.5;
-            MagnifierBrush.ViewboxUnits = BrushMappingMode.Absolute;
-            MagnifierBrush.ViewportUnits = BrushMappingMode.Absolute;
-
             double sourceWidth = magnifierSize / zoomFactor;
-            double sourceX = pos.X - (sourceWidth / 2);
-
-            MagnifierBrush.Viewbox = new Rect(sourceX, 0, sourceWidth, rulerHeight);
-            MagnifierBrush.Viewport = new Rect(0, 0, magnifierSize, rulerHeight);
-
-            // 5. THE BLUE LINE LOGIC (Displaying the locked guideline in zoom)
-            // Assuming 'LockedGuideline' is the name of your blue line in XAML
-            // And 'MagnifierLockedLine' is a line element you add inside the Magnifier layer
-            if (LockedGuideline != null && LockedGuideline.Visibility == Visibility.Visible && MagnifierLockedLine != null)
-            {
-                double lockedX = Canvas.GetLeft(LockedGuideline);
-
-                // Check if the locked line is within the current zoom viewbox
-                if (lockedX >= sourceX && lockedX <= (sourceX + sourceWidth))
-                {
-                    // Calculate relative position within the Magnifier lens
-                    double relativeX = (lockedX - sourceX) * zoomFactor;
-
-                    MagnifierLockedLine.Visibility = Visibility.Visible;
-                    MagnifierLockedLine.Height = rulerHeight;
-                    // Position it relative to the lens's Left edge
-                    Canvas.SetLeft(MagnifierLockedLine, lensLeft + relativeX);
-                }
-                else
-                {
-                    MagnifierLockedLine.Visibility = Visibility.Collapsed;
-                }
-            }
-
-            if (MagnifierEllipse.Visibility != Visibility.Visible)
-                MagnifierEllipse.Visibility = Visibility.Visible;
+            double sourceX = pos.X - (sourceWidth / 2);           
         }
         private void HideMagnifier()
         {
-            if (MagnifierEllipse != null) MagnifierEllipse.Visibility = Visibility.Collapsed;
-            if (MagnifierLine != null) MagnifierLine.Visibility = Visibility.Collapsed;
-            // Hide the virtual locked line too
-            if (MagnifierLockedLine != null) MagnifierLockedLine.Visibility = Visibility.Collapsed;
+            if (MagnifierVisual != null) MagnifierVisual.Visibility = Visibility.Collapsed;
+          
         }
-
-        private void RulerGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (_viewModel != null && _viewModel.IsLocked)
-            {
-                // 1. Mark the event as handled to prevent it from propagating further up 
-                //    to the Window/System level where it might be consumed.
-                e.Handled = true;
-
-                if (RulerGrid.ContextMenu != null)
-                {
-                    // 2. Manually set the placement target to the canvas itself
-                    RulerGrid.ContextMenu.PlacementTarget = RulerGrid;
-
-                    // 3. Set the position of the menu to the current mouse click position
-                    Point clickPoint = e.GetPosition(RulerGrid);
-                    RulerGrid.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.AbsolutePoint;
-                    RulerGrid.ContextMenu.HorizontalOffset = clickPoint.X;
-                    RulerGrid.ContextMenu.VerticalOffset = clickPoint.Y;
-
-                    // 4. Open the ContextMenu
-                    RulerGrid.ContextMenu.IsOpen = true;
-                }
-            }
-        }
-
-        private void RulerGrid_MouseLeave(object sender, MouseEventArgs e)
+        private void MainCanvas_MouseLeave(object sender, MouseEventArgs e)
         {
             HideMagnifier();
             // Only hide red line on leave; blue line stays if locked
             if (!_isGuidelineLocked)
             {
-                GlobalGuideline.Visibility = Visibility.Collapsed;
+                Guideline.Visibility = Visibility.Collapsed;
             }
         }
     }
-    public class BooleanToVisibilityConverter : IValueConverter
-    {
-        // Converts boolean to visibility (true -> Visible, false -> Collapsed)
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value is bool booleanValue)
-            {
-                bool invert = false;
-
-                // Check for the 'ConverterParameter' to invert the logic
-                if (parameter != null && parameter.ToString().Equals("Invert", StringComparison.OrdinalIgnoreCase))
-                {
-                    invert = true;
-                }
-
-                // Apply the logic:
-                // If invert is true, visible when booleanValue is false.
-                // If invert is false, visible when booleanValue is true.
-                Console.WriteLine(booleanValue);
-                Console.WriteLine(invert);
-                if (booleanValue != invert)
-                {
-                    Console.WriteLine("Visible");
-                    return Visibility.Visible;
-                }
-            }
-            Console.WriteLine("Collapsed");
-            return Visibility.Collapsed;
-        }
-
-        // Converts visibility to boolean (not typically needed for UI binding)
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return DependencyProperty.UnsetValue;
-        }
-    }
+   
 }

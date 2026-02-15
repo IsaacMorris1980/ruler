@@ -1,4 +1,5 @@
-﻿using Ruler.Wpf.Enums;
+﻿using Ruler.Wpf.Common;
+using Ruler.Wpf.Enums;
 
 using System;
 using System.Collections.Generic;
@@ -24,31 +25,63 @@ namespace Ruler.Wpf.Models
         public bool IsSelected
         {
             get => _isSelected;
-            set => SetProperty(ref _isSelected, value);
+            set
+            {
+
+                SetProperty(ref _isSelected, value);
+            }
         }
         public bool IsEnabled { get=> _isEnabled; set=> SetProperty(ref _isEnabled,value); }
 
 
     }
-    public class ScaleOption : OptionBase {}
-
-    public class OpacityOption : OptionBase { }
-    public class UnitOption : OptionBase
+    public class ScaleOption : OptionBase
     {
-        /// <summary>
-        /// Provides a strongly-typed reference to the measurement unit.
-        /// </summary>
-        public MeasurementUnit Unit { get; set; }
+        public bool IsAuto { get; set; }
+
+        // Helper to create a standard option
+        public static ScaleOption CreateManual(double scale) => new ScaleOption
+        {
+            Value = scale,
+            Label = $"{scale * 100}%",
+            IsAuto = false
+        };
+
+        // Helper to create the Auto option
+        public static ScaleOption CreateAuto() => new ScaleOption
+        {
+            Value = 0,
+            Label = "Auto",
+            IsAuto = true
+        };
     }
 
-    /// <summary>
-    /// Concrete option for saving configuration settings, using the SaveType enum.
-    /// </summary>
+    public class OpacityOption : OptionBase
+    {
+        public string PercentageLabel => $"{(double)Value * 100}%";
+    }
+
+    public class UnitOption : OptionBase
+    {
+        public MeasurementUnit Unit { get; set; }
+
+        public static UnitOption Create(MeasurementUnit unit, MeasurementUnit current) => new UnitOption
+        {
+            Unit = unit,
+            Label = unit.GetDescription(), // Auto-generate "Pixels", "Centimeters"
+            IsSelected = unit == current
+        };
+    }
+
     public class SaveOption : OptionBase
     {
-        /// <summary>
-        /// Provides a strongly-typed reference to the save configuration type.
-        /// </summary>
         public SaveTypes SaveType { get; set; }
+
+        public static SaveOption Create(SaveTypes type, SaveTypes current) => new SaveOption
+        {
+            SaveType = type,
+            Label = type.GetDescription(),
+            IsSelected = type == current
+        };
     }
 }

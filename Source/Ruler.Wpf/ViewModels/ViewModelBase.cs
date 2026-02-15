@@ -25,6 +25,14 @@ namespace Ruler.Wpf.ViewModels
 
             return propertyChanged;
         }
+        protected bool SetProperty<T>(T currentValue, T newValue, Action<T> setter, [CallerMemberName] string propertyName = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(currentValue, newValue)) return false;
+
+            setter(newValue); // Execute the update on the model object
+            OnPropertyChanged(propertyName);
+            return true;
+        }
 
         //The C#6 version of the common implementation
         protected void OnPropertyChanged([CallerMemberName] string name = null)

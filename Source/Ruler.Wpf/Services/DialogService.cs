@@ -25,7 +25,7 @@ namespace Ruler.Wpf.Services
         /// <summary>
         /// Shows the SetSizeWindow dialog.
         /// </summary>
-        /// <returns>A nullable Size object containing the new width and height if the user
+        /// <returns>A Size object containing the new width and height if the user
         /// clicks OK; otherwise, returns null.</returns>
         public Size ShowSetSizeDialog(double width,double height)
         {

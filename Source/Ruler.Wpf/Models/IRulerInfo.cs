@@ -3,6 +3,7 @@ using Ruler.Wpf.Enums;
 
 using System.Security.AccessControl;
 using System.Windows;
+using System.Windows.Media;
 
 
 namespace Ruler.Wpf.Models
@@ -16,6 +17,16 @@ namespace Ruler.Wpf.Models
         }
 
         double Height
+        {
+            get;
+            set;
+        }
+        public double Left
+        {
+            get;
+            set;
+        }
+        public double Top
         {
             get;
             set;
@@ -50,16 +61,6 @@ namespace Ruler.Wpf.Models
             get;
             set;
         }
-       double Left
-        {
-            get;
-            set;
-        }
-        double Top
-        {
-            get;
-            set;
-        }
         SaveTypes SaveType
         {
             get;
@@ -75,23 +76,56 @@ namespace Ruler.Wpf.Models
             get;
             set;
         }
-
-       // bool IsHighContrast { get; set; }
+        bool IsZoomEnabled
+        {
+            get;
+            set;
+        }
+        MeasurementUnit CurrentUnit
+        {
+            get;
+            set;
+        }
+        // bool IsHighContrast { get; set; }
         double ZoomFactor 
         { 
             get;
             set; 
         }
-        MeasurementUnit CurrentUnit 
+        bool IsMagnifierEnabled
         {
             get;
             set;
         }
-       bool IsZoomEnabled
+        double MagnificationScale
         {
             get;
             set;
         }
-
+        double GuideLinePosition
+        {
+            get;
+            set;
+        }
+        bool IsGuideLineVisible
+        {
+            get;
+            set;
+        }
+        Color GuidelineColor
+        {
+            get;
+            set;
+        }
+        bool IsGuidelineLocked
+        {
+            get;
+            set;
+        }
+        string MonitorDeviceId
+        {
+            get;
+            set;
+        }
     }
 }

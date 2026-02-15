@@ -7,11 +7,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Ruler.Wpf.Services.Persistence.Strategy
-{
+{ 
     public interface IPersistenceStrategy
     {
-        void Save(RulerInfo rulerInfo);
-        RulerInfo Load();
-
+        void Save<T>(List<T> rulerInfo);
+        List<T> Load<T>();
     }
 }

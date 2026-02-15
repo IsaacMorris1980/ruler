@@ -5,10 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
+using System.Windows.Media;
 
 namespace Ruler.Wpf.Models
 {
@@ -28,7 +31,14 @@ namespace Ruler.Wpf.Models
         private bool _isAutoScaled = true; 
         private bool _isZoomEnabled = false;
         private MeasurementUnit _currentUnit = MeasurementUnit.Pixels;
-        private double _zoomFactor = 1.0;      
+        private double _zoomFactor = 1.0;
+        private bool _isMagnifierEnabled = false;
+        private double _magnificationScale = 2.0;
+        private double _guideLinePosition = 0.0;
+        private bool _isGuideLineVisible = false;
+        private bool _isGuidelineLocked = false;
+        private Color _guidelineColor = Colors.Red;
+        private string _monitorDeviceId = Screen.PrimaryScreen.DeviceName;
 
         public double Width
         {
@@ -85,11 +95,18 @@ namespace Ruler.Wpf.Models
             get=> _scaleFactor;
             set=>SetProperty(ref _scaleFactor,value);
         }
-        public bool IsAutoScaled 
-        { 
-            get=>_isAutoScaled;
-            set => SetProperty(ref _isAutoScaled,value);
-        }     
+        public bool IsAutoScaled
+        {
+            get => _isAutoScaled;
+            set
+            {
+                if (SetProperty(ref _isAutoScaled, value))
+                {
+                    // If your ViewModel is also listening to this, ensure it doesn't
+                    // call this setter again with the same value.
+                };
+            }
+        }
         public MeasurementUnit CurrentUnit  
         {
            get => _currentUnit;
@@ -105,49 +122,116 @@ namespace Ruler.Wpf.Models
             get => _isZoomEnabled;
             set => SetProperty(ref _isZoomEnabled, value);
         }
+        public bool IsMagnifierEnabled
+        {
+            get => _isMagnifierEnabled;
+            set => SetProperty(ref _isMagnifierEnabled, value);
+        }
+        public double MagnificationScale
+        {
+            get => _magnificationScale;
+            set => SetProperty(ref _magnificationScale, value);
+        }
+        public double GuideLinePosition
+        {
+            get => _guideLinePosition;
+            set => SetProperty(ref _guideLinePosition, value);
+        }
+        public bool IsGuideLineVisible
+        {
+            get => _isGuideLineVisible;
+            set => SetProperty(ref _isGuideLineVisible, value);
+        }
+        public Color GuidelineColor
+        {
+            get => _guidelineColor;
+            set => SetProperty(ref _guidelineColor, value);
+        }
+        public bool IsGuidelineLocked
+        {
+            get => _isGuidelineLocked;
+            set => SetProperty(ref _isGuidelineLocked, value);
+        }
+        public string MonitorDeviceId
+        {
+            get => _monitorDeviceId;
+            set => SetProperty(ref _monitorDeviceId, value);
+        }
+      
+
         public static RulerInfo GetDefaultRulerInfo()
         {
-            RulerInfo rulerInfo = new RulerInfo
+
+            RulerInfo rulerInfo = new RulerInfo();
+
+            // Suppress while initializing to prevent partial-state updates
+            rulerInfo.SuppressNotifications = true;
+            try
             {
-                Width = 400,
-                Height = 75,
-                Opacity = 0.60,
-                ShowToolTip = true,
-                IsLocked = false,
-                IsVertical = false,
-                TopMost = true,
-                Left = 0,
-                Top = 0,               
-                SaveType = SaveTypes.none,
-                ScaleFactor = 1.0,
-                IsAutoScaled = false,
-                CurrentUnit = MeasurementUnit.Pixels,
-              ZoomFactor = 1.0,
-                IsZoomEnabled = false,
-               
-            };
+                rulerInfo.Width = 400;
+                rulerInfo.Height = 75;
+                rulerInfo.Opacity = 0.60;
+                rulerInfo.ShowToolTip = true;
+                rulerInfo.IsLocked = false;
+                rulerInfo.IsVertical = false;
+                rulerInfo.TopMost = true;
+                rulerInfo.Left = 0;
+                rulerInfo.Top = 0;
+                rulerInfo.SaveType = SaveTypes.none;
+                rulerInfo.ScaleFactor = 1.0;
+                rulerInfo.IsAutoScaled = false;
+                rulerInfo.CurrentUnit = MeasurementUnit.Pixels;
+                rulerInfo.ZoomFactor = 1.0;
+                rulerInfo.IsZoomEnabled = false;
+                rulerInfo.IsMagnifierEnabled = false;
+                rulerInfo.MagnificationScale = 2.0;
+                rulerInfo.GuideLinePosition = 0.0;
+                rulerInfo.IsGuideLineVisible = false;
+                rulerInfo.IsGuidelineLocked = false;
+                rulerInfo.GuidelineColor = Colors.Red;
+                rulerInfo.MonitorDeviceId = Screen.PrimaryScreen.DeviceName;
+            }
+            finally
+            {
+                rulerInfo.SuppressNotifications = false;
+            }
 
             return rulerInfo;
         }
 
         public static void CopyInto(IRulerInfo source, IRulerInfo targetInstance)
         {
-            targetInstance.Width = source.Width;
-            targetInstance.Height = source.Height;
-            targetInstance.IsVertical = source.IsVertical;
-            targetInstance.Opacity = source.Opacity;
-            targetInstance.ShowToolTip = source.ShowToolTip;
-            targetInstance.IsLocked = source.IsLocked;
-            targetInstance.TopMost = source.TopMost;
-            targetInstance.Left = source.Left;
-            targetInstance.Top = source.Top;
-            targetInstance.SaveType = source.SaveType;
-            targetInstance.ScaleFactor = source.ScaleFactor;
-            targetInstance.IsAutoScaled = source.IsAutoScaled;
-            targetInstance.CurrentUnit = source.CurrentUnit;
-            targetInstance.ZoomFactor = source.ZoomFactor;           
-            targetInstance.IsZoomEnabled = source.IsZoomEnabled;
-        }     
+            if (source == null || targetInstance == null) return;
 
+            // Handle SuppressNotifications if the objects are RulerInfo instances
+            var sourceModel = source as RulerInfo;
+            var targetModel = targetInstance as RulerInfo;
+
+            if (sourceModel != null) sourceModel.SuppressNotifications = true;
+            if (targetModel != null) targetModel.SuppressNotifications = true;
+
+            try
+            {
+                // Get all properties defined specifically in the IRulerInfo interface
+                PropertyInfo[] properties = typeof(IRulerInfo).GetProperties(
+                    BindingFlags.Public | BindingFlags.Instance);
+
+                foreach (PropertyInfo prop in properties)
+                {
+                    // Check if the property can be read from source and written to target
+                    if (prop.CanRead && prop.CanWrite)
+                    {
+                        object value = prop.GetValue(source);
+                        prop.SetValue(targetInstance, value);
+                    }
+                }
+            }
+            finally
+            {
+                if (sourceModel != null) sourceModel.SuppressNotifications = false;
+                if (targetModel != null) targetModel.SuppressNotifications = false;
+            }
+        
+        }
     }
 }
