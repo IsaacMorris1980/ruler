@@ -6,17 +6,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media;
 
 using static Ruler.Wpf.Common.NativeMethods;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
-using Win=System.Windows;
+using Win = System.Windows;
 
 namespace Ruler.Wpf.Services
 {
@@ -24,76 +21,28 @@ namespace Ruler.Wpf.Services
     {
         public event EventHandler DisplayLayoutChanged;
 
-        private const uint MONITOR_DEFAULTTONEAREST = 2;
-        private const double StandardDpi = 96.0;
-        private const int WM_WINDOWPOSCHANGED = 0x0047;
-        private const int WM_NCHITTEST = 0x0084;
-        private const int WM_NCRBUTTONUP = 0x00A5;
-        private const int WM_CONTEXTMENU = 0x007B;
-        private const int HTCAPTION = 2;
-        private const int WM_DISPLAYCHANGE = 0x007E;
-        private const int WM_LBUTTONDOWN = 0x0201;
-        private const int WM_LBUTTONUP = 0x0202;
-        private const int WM_MOUSEMOVE = 0x0200; // Added for drag tracking
-        private const int WM_DPICHANGED = 0x02E0;
-        private const int SWP_NOSIZE = 0x0001;
-        private const int SWP_NOMOVE = 0x0002;
-
-        // Win32 Metrics for Drag Threshold
-        private const int SM_CXDRAG = 68;
-        private const int SM_CYDRAG = 69;
-
-        // Monitor Flags
-        public const uint MONITOR_DEFAULTTONULL = 0;
-        public const uint MONITOR_DEFAULTTOPRIMARY = 1;
-       
-
-        // System Metrics
-        public const int SM_CXVIRTUALSCREEN = 78;
-        public const int SM_CYVIRTUALSCREEN = 79;
-
         private Win.Point _startPos;
         private bool _isProcessing;
         private bool _movedBeyondThreshold;
+        private ILoggingService<EnvironmentService> _logger;    
         // Maps the Window Handle to the unique ID of the ViewMode
         private readonly Dictionary<IntPtr, HwndSourceHook> _hookCache = new Dictionary<IntPtr, HwndSourceHook>();
-        public EnvironmentService()
-        {
+        private readonly Dictionary<IntPtr, WindowHookInfo> _activeHooks = new Dictionary<IntPtr, WindowHookInfo>();
+        private const double TapThreshold = 10.0;
 
+        public EnvironmentService(ILoggingService<EnvironmentService> logger)
+        {
+            logger = logger ?? throw new ArgumentNullException(nameof(logger));
             SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         }
         // 10 pixels is a standard "slop" value for touch screens to account for finger jitter
-        private const double TapThreshold = 10.0;
-        #region Win32_Imports
-        private enum MonitorDpiType
-        {
-            EffectiveDpi = 0, // Includes OS scaling (125%, 150%, etc.)
-            AngularDpi = 1,   // Based on viewing angle
-            RawDpi = 2        // Literal hardware pixels per inch
-        }
-        private class WindowHookInfo
-        {
-            public Win.Window Window { get; set; }
-            public Action<double, double> MoveCallback { get; set; }
-            public Action<double> DpiCallback { get; set; }
-            public Func<bool> IsLockedPredicate { get; set; }
-            public Action<double, double> RightClickCallback { get; set; }
-            public Action<double, double> ResizeCallback { get; set; }
-            public Action<double> TapCallback { get; set; }
-            public HwndSource HookSource { get; set; }
-            public bool IsInMoveSizeLoop { get; set; }
-            public Action<IntPtr> monitorChangedCallback { get; set; }
-            public Func<bool> isPhysicalPredicate { get; set; }
-        }
-
-        #endregion
-        private readonly Dictionary<IntPtr, WindowHookInfo> _activeHooks = new Dictionary<IntPtr, WindowHookInfo>();
-
+       
+ 
         public double GetDpiScale(IntPtr window)
         {
             if (!_activeHooks.TryGetValue(window, out var info)) return 0.0;
             var s = NativeMethods.GetDpiForMonitor(window, (info.isPhysicalPredicate.Invoke()==true)?NativeMethods.MonitorDpiType.RawDpi: NativeMethods.MonitorDpiType.EffectiveDpi,out uint dipX,out uint dipY);
-            return dipX / StandardDpi;
+            return dipX / 96;
         }
         private void OnDisplaySettingsChanged(object sender, EventArgs e)
         {
@@ -109,15 +58,15 @@ namespace Ruler.Wpf.Services
             var hMonitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
 
             var info = new NativeMethods.MONITORINFOEX();
-            info.cbSize = Marshal.SizeOf(typeof(NativeMethods.MONITORINFOEX));
+            info.Size = Marshal.SizeOf(typeof(NativeMethods.MONITORINFOEX));
 
             if (NativeMethods.GetMonitorInfo(hMonitor, ref info))
             {
                 return new MonitorPositionData
                 {
-                    DeviceId = info.szDevice,
-                    RelativeX = window.Left - info.rcMonitor.Left,
-                    RelativeY = window.Top - info.rcMonitor.Top
+                    DeviceId = info.DeviceName,
+                    RelativeX = window.Left - info.Monitor.Left,
+                    RelativeY = window.Top - info.Monitor.Top
                 };
             }
 
@@ -152,53 +101,28 @@ namespace Ruler.Wpf.Services
         {
             SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
         }
+   
 
         public void RegisterWindow(
-             Win.Window window,
-             Action<double, double> moveCallback,
-             Action<double> dpiCallback,
-             Func<bool> isLockedPredicate,
-             Action<double, double> onRightClicked,
-             Action<double, double> onMenuButtonPressed,
-             Action<double> onTap,
-             Action<double, double> resizeCallback,
-             Action<IntPtr> monitorChangedCallback,
-             Func<bool> isPhysicalPredicate)
+             Win.Window window)
         {
            var helper = new WindowInteropHelper(window);
             IntPtr hwnd = helper.EnsureHandle();
 
-            var hookInfo = new WindowHookInfo
-            {
-                Window = window,
-                MoveCallback = moveCallback,
-                DpiCallback = dpiCallback,
-                IsLockedPredicate = isLockedPredicate,
-                RightClickCallback = onRightClicked,
-                ResizeCallback = resizeCallback,
-                TapCallback = onTap,
-                monitorChangedCallback=monitorChangedCallback,
-                 isPhysicalPredicate=isPhysicalPredicate,
-                HookSource = HwndSource.FromHwnd(hwnd)
-            };
-
-            hookInfo.HookSource.AddHook(WndProc);
-            _activeHooks[hwnd] = hookInfo;
+       
         }
      
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             if (!_activeHooks.TryGetValue(hwnd, out var info)) return IntPtr.Zero;
-
+            int x=0;
+            int y=0;
             switch (msg)
             {
                 case WM_NCHITTEST:
                     if (info.IsLockedPredicate.Invoke() == true) return IntPtr.Zero;
                     handled = true;
                     return new IntPtr(HTCAPTION);
-
-
-
                 case WM_WINDOWPOSCHANGED:
                     WINDOWPOS wp = (WINDOWPOS)Marshal.PtrToStructure(lParam, typeof(WINDOWPOS));
 
@@ -206,39 +130,116 @@ namespace Ruler.Wpf.Services
                     if ((wp.flags & SWP_NOSIZE) == 0)
                     {
                         Vector dipSize = ConvertWidthHeightToDips(info.HookSource, wp.cx, wp.cy);
-                        info.Window.Width = dipSize.X;
-                        info.Window.Height = dipSize.Y;
-                        info.ResizeCallback?.Invoke(dipSize.X, dipSize.Y);
+                        OnResizeed?.Invoke(dipSize.X, dipSize.Y);
                     }
 
                     // 2. Handle Move (only if SWP_NOMOVE is NOT set)
                     if ((wp.flags & SWP_NOMOVE) == 0)
                     {
                         Point dipPos = ConvertLeftAndTopToDips(info.HookSource, wp.x, wp.y);
-                        info.Window.Left = dipPos.X;
-                        info.Window.Top = dipPos.Y;
-                        info.MoveCallback?.Invoke(dipPos.X, dipPos.Y);
+                        OnWindowMoved?.Invoke(dipPos.X, dipPos.Y);
                     }
                     break;
-
                 case WM_NCRBUTTONUP:
-                    GetCursorPos(out POINT p);
-                    info.RightClickCallback?.Invoke(p.x, p.y);
+
+                    // 1. Extract coordinates from lParam
+                    // Low order word is X, High order word is Y
+                     x = (int)(short)((uint)lParam & 0xFFFF);
+                      y = (int)(short)(((uint)lParam >> 16) & 0xFFFF);
+
+                    // 2. Check if this was a keyboard-triggered event
+                    // Windows sends -1, -1 in lParam for keyboard context menu requests
+                    if (x == -1 && y == -1)
+                    {
+                        // For keyboard events, wParam is often the HWND of the window
+                        if (wParam == IntPtr.Zero) break;
+
+                        HwndSource source = HwndSource.FromHwnd(wParam);
+                        Window mainWindow = source?.RootVisual as Window;
+
+                        if (mainWindow != null)
+                        {
+                            // Offset from the top-left of the window for keyboard users
+                            OnMenuButtonPressed?.Invoke(mainWindow.Left + 20, mainWindow.Top + 20);
+                        }
+                    }
+                    else
+                    {
+                        // 3. It's a real mouse click. 
+                        // We use the coordinates extracted from lParam for accuracy 
+                        // relative to the moment the button was actually released.
+                        OnRightClicked?.Invoke(x, y);
+                    }
+
                     handled = true;
                     break;
-
                 case WM_DPICHANGED:
                     IntPtr suggestion = NativeMethods.MonitorFromWindow(info.HookSource.Handle, MONITOR_DEFAULTTONEAREST);
-                    double newDpi=1.0;
+                  
                     if (info.isPhysicalPredicate.Invoke() == true)
                     {
                         var physicaldpi = NativeMethods.GetDpiForMonitor(suggestion, NativeMethods.MonitorDpiType.RawDpi, out uint dpiX, out _);
+                        OnDpiChanged?.Invoke(dpiX);
                     }
                     else
                     {
                         var suggestdpi = NativeMethods.GetDpiForMonitor(suggestion, NativeMethods.MonitorDpiType.EffectiveDpi, out uint dpiX, out _);
+                        OnDpiChanged?.Invoke(dpiX/96);
                     }
-                    info.DpiCallback?.Invoke(newDpi);
+                    break;
+                case WM_LBUTTONDOWN:
+                    _isProcessing = true;
+                    _movedBeyondThreshold = false;
+                    Win.Window _window = ReturnWindowFromIntPtr(hwnd);
+                    if (_window != null)
+                    {
+                        _startPos = _window.PointToScreen(new Win.Point(0, 0));
+                    }
+                    break;
+                case WM_LBUTTONUP:
+                    if (_isProcessing)
+                    {
+                        Win.Window _win = ReturnWindowFromIntPtr(hwnd);
+                        if (_win != null)
+                        {
+                            Win.Point endPos = _win.PointToScreen(new Win.Point(0, 0));
+                            double deltaX = Math.Abs(endPos.X - _startPos.X);
+                            double deltaY = Math.Abs(endPos.Y - _startPos.Y);
+                            if (deltaX > TapThreshold || deltaY > TapThreshold)
+                            {
+                                _movedBeyondThreshold = true;
+                            }
+                            // If we didn't move the window significantly, it's a tap
+                            if (!_movedBeyondThreshold)
+                            {
+                             
+                            }
+                            _isProcessing = false;
+                        }
+                        else
+                        { 
+                        UnregisterWindow(hwnd);
+                        }
+                    }
+                    break;
+                case WM_CONTEXTMENU:
+                    // This is the "Gold Standard" for menus. 
+                    // It covers Right Click (Client), Right Click (NC/HTCAPTION), and the Menu Key.
+                    x = (short)((int)lParam & 0xFFFF);
+                     y = (short)((int)lParam >> 16);
+
+                    // If lParam is -1, it means the Menu key was pressed (keyboard)
+                    if (x == -1 && y == -1)
+                    {
+                        Win.Window _windows = ReturnWindowFromIntPtr(hwnd);
+                       
+                    }
+                    else
+                    {
+                       
+                    }
+
+                    handled = true; // Mark as handled so the default system menu doesn't show
                     break;
             }
 
@@ -267,19 +268,16 @@ namespace Ruler.Wpf.Services
         }
         public void UnregisterWindow(IntPtr window)
         {
-            if (window != null && _hookCache.TryGetValue(window, out var hook))
+            if (window == IntPtr.Zero) return;
+
+            if (_activeHooks.TryGetValue(window, out var info))
             {
-                //var hwnd = new WindowInteropHelper(window).Handle;
-                if (window != IntPtr.Zero) HwndSource.FromHwnd(window)?.RemoveHook(hook);
-                if (_hookCache.Count() > 1)
-                {
-                    _hookCache.Remove(window);
-                }
-                else
-                {
-                    _hookCache.Clear();
-                }
+                info.HookSource?.RemoveHook(WndProc);
+                _activeHooks.Remove(window);
             }
+
+            _hookCache.Remove(window);
+        }
         }
         private Point ConvertLeftAndTopToDips(HwndSource source,int left,int top)
         {
@@ -321,7 +319,7 @@ namespace Ruler.Wpf.Services
                 GetDpiForMonitor(hMonitor, NativeMethods.MonitorDpiType.RawDpi, out uint dpiX, out _);
                 return dpiX;
             }
-            return StandardDpi;
+            return 96;
         }
         /// <summary>
         /// Checks if any part of the window is currently visible on any connected monitor.
@@ -480,6 +478,13 @@ namespace Ruler.Wpf.Services
             var source = HwndSource.FromHwnd(hwnd);
             Win.Window win = source?.RootVisual as Win.Window;
             return win;
+        }
+        private static readonly bool _isModernDpiSupported = CheckDpiSupport();
+
+        private static bool CheckDpiSupport()
+        {
+            IntPtr user32 = NativeMethods.GetModuleHandle("user32.dll");
+            return NativeMethods.GetProcAddress(user32, "GetDpiForWindow") != IntPtr.Zero;
         }
     }
 }

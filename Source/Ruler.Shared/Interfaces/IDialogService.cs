@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using Ruler.Wpf.Models;
+using Ruler.Shared.Interfaces;
 
-namespace Ruler.Wpf.Services
+namespace Ruler.Shared.Interfaces
 {
     /// <summary>
     /// Defines a contract for services that show dialogs.

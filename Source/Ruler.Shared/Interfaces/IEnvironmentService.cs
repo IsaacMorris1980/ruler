@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 
-namespace Ruler.Wpf.Services
+namespace Ruler.Shared.Interfaces
 {
 
     public interface IEnvironmentService

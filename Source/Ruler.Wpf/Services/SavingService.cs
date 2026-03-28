@@ -12,103 +12,58 @@ using System.Threading.Tasks;
 
 namespace Ruler.Wpf.Services
 {
-    public class SavingService : IPersistenceStrategy
+    // 4. The Refactored Saving Service using DI
+    public class SavingService : ISavingService
     {
-        // A mapping dictionary makes the code "Open" for extension without large if/else blocks
-        private readonly Dictionary<Type, string> _typeToSettingKey = new Dictionary<Type, string>
+        private readonly IServiceProvider _serviceProvider;
+
+        private readonly IDataPreprocessor<RulerInfo> _rulerPreprocessor;
+        private readonly ILoggingService<SavingService> _logger;
+
+        private readonly Dictionary<Type, string> _settingsMap = new()
+    {
+        { typeof(RulerInfo), "RulerSettingsJson" },
+        { typeof(MonitorProfile), "MonitorProfilesJson" }
+    };
+
+        // We inject IServiceProvider to resolve processors dynamically
+        public SavingService(ILoggingService<SavingService> logger,IDataPreprocessor<RulerInfo> dataPreprocessor)
         {
-            { typeof(RulerInfo), "RulerSettingsJson" },
-            { typeof(MonitorProfile), "MonitorProfilesJson" }
-        };
-
-        public void Save<T>(List<T> objectToSave)
-        {
-            if (objectToSave == null || !objectToSave.Any()) return;
-
-            Type type = typeof(T);
-            if (!_typeToSettingKey.ContainsKey(type))
-            {
-                throw new NotSupportedException($"Type {type.Name} is not supported by SavingService.");
-            }
-
-            object dataToSerialize;
-
-            // Specialized logic for RulerInfo
-            if (type == typeof(RulerInfo))
-            {
-                dataToSerialize = objectToSave
-                    .Cast<RulerInfo>()
-                    .Where(x => x.SaveType != Enums.SaveTypes.none)
-                    .Select(x => PrepareRulerForSave(x))
-                    .ToList();
-            }
-            else
-            {
-                dataToSerialize = objectToSave;
-            }
-
-            string json = JsonConvert.SerializeObject(dataToSerialize);
-            Settings.Default[_typeToSettingKey[type]] = json;
-            Settings.Default.Save(); // Don't forget to persist the settings!
+            _rulerPreprocessor = dataPreprocessor;
+            _logger = logger;
         }
 
-        public List<T> Load<T>() // Removed string parameter, use the generic T
+        public void Save<T>(List<T> items)
         {
-            Type type = typeof(T);
-            if (!_typeToSettingKey.TryGetValue(type, out string settingKey))
+            if (items == null || !items.Any()) return;
+
+            IEnumerable<T> dataToSave = items;
+
+            // DI MAGIC: Try to find a preprocessor for this specific type T
+            if (typeof(T) == typeof(RulerInfo))
             {
-                return new List<T>();
+                _logger.LogInfo("Preprocessing RulerInfo data before saving.");
+                dataToSave = (IEnumerable<T>)_rulerPreprocessor.Preprocess(items.Cast<RulerInfo>());
             }
 
-            var savedValue = Settings.Default[settingKey];
-            if (savedValue == null || string.IsNullOrEmpty(savedValue.ToString()))
+            if (_settingsMap.TryGetValue(typeof(T), out string key))
             {
-                return new List<T>();
+                string json = JsonConvert.SerializeObject(dataToSave);
+                Settings.Default[key] = json;
+                Settings.Default.Save();
             }
-
-            return JsonConvert.DeserializeObject<List<T>>(savedValue.ToString()) ?? new List<T>();
         }
 
-        /// <summary>
-        /// Creates a stripped-down copy of the ruler based on its SaveType.
-        /// Changed name from 'Sort' to 'PrepareRulerForSave' to reflect what it actually does.
-        /// </summary>
-        private RulerInfo PrepareRulerForSave(RulerInfo item)
+        public List<T> Load<T>()
         {
-            if (item == null) return null;
-
-            RulerInfo strippedCopy = RulerInfo.GetDefaultRulerInfo();
-
-            // Ensure the SaveType carries over
-            strippedCopy.SaveType = item.SaveType;
-
-            switch (item.SaveType)
+            if (_settingsMap.TryGetValue(typeof(T), out string key))
             {
-                case Enums.SaveTypes.all:
-                    RulerInfo.CopyInto(item, strippedCopy);
-                    break;
+                var json = Settings.Default[key]?.ToString();
+                if (string.IsNullOrEmpty(json)) return new List<T>();
 
-                case Enums.SaveTypes.location:
-                    strippedCopy.Left = item.Left;
-                    strippedCopy.Top = item.Top;
-                    strippedCopy.IsVertical = item.IsVertical;
-                    break;
-
-                case Enums.SaveTypes.size:
-                    strippedCopy.Width = item.Width;
-                    strippedCopy.Height = item.Height;
-                    strippedCopy.IsVertical = item.IsVertical;
-                    break;
-
-                case Enums.SaveTypes.appearance:
-                    strippedCopy.Opacity = item.Opacity;
-                    strippedCopy.ShowToolTip = item.ShowToolTip;
-                    strippedCopy.IsLocked = item.IsLocked;
-                    strippedCopy.TopMost = item.TopMost;
-                    break;
+                return JsonConvert.DeserializeObject<List<T>>(json) ?? new List<T>();
             }
-
-            return strippedCopy;
+            return new List<T>();
         }
     }
 }

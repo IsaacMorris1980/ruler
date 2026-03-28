@@ -13,24 +13,20 @@ namespace Ruler.Wpf.Services
     /// </summary>
     public class DialogService : IDialogService
     {
-        private readonly SingleRulerPersistenceService _persistenceService;
-        private readonly ILoggingService _loggingService;
-        private readonly IServiceProvider _serviceProvider;
-        public DialogService(SingleRulerPersistenceService persistenceService, ILoggingService loggingService, IServiceProvider serviceProvider)
+        private readonly ILoggingService<DialogService> _loggingService;
+        public DialogService(ILoggingService<DialogService> loggingService)
         {
-            _persistenceService = persistenceService;
             _loggingService = loggingService;
-            _serviceProvider = serviceProvider;
         }
         /// <summary>
         /// Shows the SetSizeWindow dialog.
         /// </summary>
         /// <returns>A Size object containing the new width and height if the user
         /// clicks OK; otherwise, returns null.</returns>
-        public Size ShowSetSizeDialog(double width,double height)
+        public Size ShowSetSizeDialog(double width, double height)
         {
             // Create a new instance of the SetSizeWindow.
-            var setSizeWindow = new SetSizeWindow(width,height);
+            var setSizeWindow = new SetSizeWindow(width, height);
 
             // Show the dialog and capture the result.
             bool? result = setSizeWindow.ShowDialog();
@@ -43,41 +39,12 @@ namespace Ruler.Wpf.Services
             }
 
             // If the dialog was cancelled, return null.
-            return new Size(400,200);
+            return new Size(400, 200);
         }
-        public void AddRuler(Window rulerWindow)
+        public void ShowAboutDialog(string message)
         {
-            _openRulers.Add(rulerWindow);
-            // Clean up the list when the window is closed
-            rulerWindow.Closed += (sender, e) => _openRulers.Remove(rulerWindow);
-        }
-        private List<Window> _openRulers = new List<Window>();
-        public IReadOnlyList<Window> OpenRulers => _openRulers;
-        public void ShowNewRuler(RulerInfo initialInfo)
-        {
-            try
-            {
 
-                MainWindow newWindow = _serviceProvider.GetRequiredService<MainWindow>();
-
-                // 2. Since MainWindow's constructor takes RulerViewModel, the ViewModel is created automatically.
-                RulerViewModel newViewModel = (RulerViewModel)newWindow.DataContext;
-
-                // 3. Set the specific data that the container couldn't know (the initialInfo)
-                newViewModel.SetInitialState(initialInfo);
-                _openRulers.Add(newWindow);
-
-                // 5. Clean up the list when the window is closed
-                newWindow.Closed += (sender, e) => _openRulers.Remove(newWindow);
-
-                // ... rest of the logic ...
-                newWindow.Show();       
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            MessageBox.Show(message, "About Ruler", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }

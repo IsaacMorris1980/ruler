@@ -30,52 +30,29 @@ namespace Ruler.Wpf
         {
             base.OnStartup(e);
 
-            // 1. Setup Logging and Initial Load Strategy
-            var log = new LoggingService();
-            var settingsStrategy = new SettingsPersistenceStrategy(log);
-
-            // 2. Determine initial state (Command line or Saved settings)
-            RulerInfo initialInfo;
-            if (e.Args.Length > 0)
-            {
-                initialInfo = CommandLineRulerFactory.CovertToRulerInfo(e.Args);
-            }
-            else
-            {
-                initialInfo = settingsStrategy.Load();
-            }
+        
+       
 
             // 3. Configure Dependency Injection
             ServiceCollection serviceCollection = new ServiceCollection();
-
-            // Register instances and services
-            serviceCollection.AddSingleton(initialInfo);
+            // Register instances and service
             serviceCollection.AddSingleton<IEnvironmentService, EnvironmentService>();
-            serviceCollection.AddSingleton<ILoggingService>(log);
-            serviceCollection.AddSingleton<SettingsPersistenceStrategy>(settingsStrategy);
-            serviceCollection.AddSingleton<SingleRulerPersistenceService>();
+            serviceCollection.AddSingleton(typeof(ILoggingService<>),typeof(DebugLoggingService<>));
+            serviceCollection.AddSingleton<IPersistenceStrategy, SavingService>();
             serviceCollection.AddSingleton<IDialogService, DialogService>();
-
+            serviceCollection.AddSingleton<SavingService>();
+            serviceCollection.AddSingleton<AppManager>();
+            serviceCollection.AddSingleton<MonitorManager>();
             // Register ViewModels and Windows
             serviceCollection.AddTransient<RulerViewModel>();
             serviceCollection.AddTransient<MainWindow>();
-
             ServiceProvider = serviceCollection.BuildServiceProvider();
-
             // 4. Run Startup Logic
-            ExecuteStartupLogic();
+          AppManager appManager = ServiceProvider.GetRequiredService<AppManager>();
+          
         }
 
-        private void ExecuteStartupLogic()
-        {
-            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
-            var dialogService = ServiceProvider.GetRequiredService<IDialogService>();
-
-            // Register the window with the dialog service if it manages multiple instances
-            dialogService.AddRuler(mainWindow);
-
-            mainWindow.Show();
-        }
+      
 
     }
 }

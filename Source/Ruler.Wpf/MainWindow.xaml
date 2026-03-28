@@ -32,7 +32,7 @@
         ToolTipService.IsEnabled="{Binding ShowToolTip}">
 
     <Window.ContextMenu >
-        <ContextMenu Background="Gray" Name="ShowMenu">
+        <ContextMenu Background="Gray" Name="ShowContextMenu">
             <MenuItem Header="Always on Top" IsCheckable="True" IsChecked="{Binding TopMost,Mode=OneWay}" Command="{Binding ToggleTopMostCommand}"/>
             <MenuItem Header="Change Orientation" Command="{Binding ToggleVerticalCommand}"/>
             <MenuItem Header="Tool Tip" IsCheckable="True" IsChecked="{Binding ShowToolTip,Mode=OneWay}" Command="{Binding ToggleToolTipCommand}"/>

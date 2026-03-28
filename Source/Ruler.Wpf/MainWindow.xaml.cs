@@ -20,7 +20,7 @@ namespace Ruler.Wpf
     public partial class MainWindow : Window
     {
         private RulerViewModel _viewModel;
-        private ILoggingService _loggingService;
+        private ILoggingService<MainWindow> _loggingService;
         private IEnvironmentService _environmentService;
         // Points used for calculating delta movements.
         private Point _startPoint;
@@ -29,17 +29,20 @@ namespace Ruler.Wpf
         private bool _isGuidelineLocked = false;
        
 
-        public MainWindow(RulerViewModel viewModel,IEnvironmentService service)
+        public MainWindow(IServiceProvider serviceProvider)
         {
             InitializeComponent();
-            this.SourceInitialized += MainWindow_SourceInitialized;
-            this.DataContext = viewModel;
+            //this.SourceInitialized += MainWindow_SourceInitialized;
+
+
+
+
+        }
+        public void InitializeViewModel(RulerViewModel viewModel)
+        {
             _viewModel = viewModel;
-            _environmentService = service;
-
-
-
-
+            this.DataContext = _viewModel;
+            this.SourceInitialized += MainWindow_SourceInitialized;
         }
         private void MainWindow_SourceInitialized(object sender, EventArgs e)
         {
@@ -59,8 +62,8 @@ namespace Ruler.Wpf
          }
      },
      isLockedPredicate:() => _viewModel.IsLocked,
-     onRightClicked:(x, y) => { ShowMenu?.ShowAt(x, y, this); },
-    onMenuButtonPressed:(x, y) => { ShowMenu?.ShowAt(x, y, this); },
+     onRightClicked:(x, y) => { ShowMenu(x,y); },
+    onMenuButtonPressed:(x, y) => { ShowMenu(x, y); },
      onTap:(double x) => { _viewModel.SetGuideLinePosition(x); },
      resizeCallback:(width, height) =>
         {
@@ -90,7 +93,13 @@ namespace Ruler.Wpf
             };
         }
         private bool _isFullyLoaded = false;
-
+private void ShowMenu (double x, double y)
+        {
+            if (DataContext is RulerViewModel vm)
+            {
+                ShowContextMenu.ShowAt(x, y,this);
+            }
+        }
         private void UpdateMagnifier(Point pos)
         {
             if (RulerSurface == null || MagnifierVisual == null || MagnifierLens == null) return;

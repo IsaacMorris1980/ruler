@@ -1,10 +1,11 @@
-﻿using Ruler.Wpf.Common;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+using Ruler.Wpf.Common;
 using Ruler.Wpf.Enums;
-using Ruler.Wpf.Messaging;
 using Ruler.Wpf.Models;
 using Ruler.Wpf.Services;
 using Ruler.Wpf.Services.Persistence;
-
+using Ruler.Wpf.Services.Persistence.Strategy;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,11 +22,9 @@ namespace Ruler.Wpf.ViewModels
     // The core ViewModel class for the Ruler application
     public class RulerViewModel : ViewModelBase
     {
+        #region Fields
         // The RulerInfo class would be our Model
         private RulerInfo _rulerInfo;
-        private IMessageHubService _hubService;
-        private Point _displaylocation = new Point(0, 0);
-        private bool _isMagnifierEnabled = false;
         private ICommand _toggleLockCommand;
         private ICommand _exitCommand;
         private ICommand _toggleVerticalCommand;
@@ -42,34 +41,42 @@ namespace Ruler.Wpf.ViewModels
         private ICommand _setUnitCommand;
         private ICommand _enableMagnifierCommand;
         private bool _isInitialized = false;
+        private IDialogService _dialogService;
+        private ISavingService _persistenceService;   
+        private IEnvironmentService _environmentService;
+            private ILoggingService<RulerViewModel> _loggingService;
+        private IServiceProvider _serviceProvider;
+        private IntPtr _currentMonitorHandle = IntPtr.Zero; 
         // State variables for mouse interaction
         private bool _isLoadingState;
-        private bool _isGuideLineVisible = false;
-        private double _guideLinePosition;
-        private double _systemDpiScale;
-        private double _magnifierScale;
-        private bool _isGuideLineLocked = false;    
-        public Guid ViewModelGuid { get; } = Guid.NewGuid();
+        public Guid ViewModelGuid => _rulerInfo.Id;
+        private double _systemDpiScale = 1.0;
+        private double _currentPhysicalScale = 1.0;
+        private ILoggingService<RulerViewModel> _logger;
+        private double _currentEffectiveScale;
+        private double ManualScaleValue;
 
         #region Constructor
-        public RulerViewModel(IMessageHubService hub,RulerInfo initialInfo)
+        public RulerViewModel(IServiceProvider service)
         {
-            //_dialogService = dialogService ?? throw new ArgumentException(nameof(dialogService));
-            //_persistenceService = persistenceService ?? throw new ArgumentException(nameof(persistenceService));
-            //_loggingService = loggingService ?? throw new ArgumentException(nameof(loggingService));
-            //_environmentService = environmentService ?? throw new ArgumentException(nameof(environmentService));
-            _rulerInfo = initialInfo ?? throw new ArgumentException(nameof(initialInfo));
-            _hubService = hub ?? throw new ArgumentException(nameof(hub));  
+            _serviceProvider = service; // This constructor is for design-time only and should not be used at runtime
+            _dialogService = service.GetRequiredService<IDialogService>();
+            _persistenceService = service.GetRequiredService<ISavingService>();
+            _loggingService = service.GetRequiredService<ILoggingService<RulerViewModel>>();
+            _environmentService = service.GetRequiredService<IEnvironmentService>(); 
             InitializeCommands();
             InitializeUnits();
             InitializeOpacities();
             InitializeScales();
             InitializeSaveTypes();
             InitializeMagnifyScales();
-            _rulerInfo.PropertyChanged += OnRulerInfoPropertyChanged;
-            _hubService.Subscribe<LockedChangedMessage>(this,OnLockedChangedMessageReceived);
-            _hubService.Subscribe<SystemDPIChangedMessage>(this, OnSystemDPIChangedMessageReceived);
-            _hubService.Subscribe<LocationSizedChangedMessage>(this, OnLocationSizeChangedMessageReceived);
+            _environmentService.OnWindowMoved += UpdateLocation;
+            _environmentService.OnDpiChanged += UpdateSystemScale;
+
+        }
+        public void InitializeHwnd(IntPtr hwnd)
+        {
+            _currentMonitorHandle = hwnd;
         }
         /// <summary>
         /// Replaces OrientationToAngleConverter
@@ -82,42 +89,19 @@ namespace Ruler.Wpf.ViewModels
         public Visibility MagnifierVisibility => IsMagnifierEnabled ? Visibility.Visible : Visibility.Collapsed;
 
 
-        private void OnLocationSizeChangedMessageReceived(LocationSizedChangedMessage message)
-        {
-            Width = message.Width;
-            Height = message.Height;
-            Left = message.Left;
-            Top = message.Top;
-        }
-
-        public void OnSystemDPIChangedMessageReceived(SystemDPIChangedMessage message)
-        {
-            SystemDpiScale = message.NewDpiScale;
-            if (IsAutoScaled)
-            {
-                OnPropertyChanged(nameof(ScaleFactor));
-            }
-        }
-        private void OnLockedChangedMessageReceived(LockedChangedMessage message)
-        {
-            if (message.RulerID == this.ViewModelGuid)
-            {
-                message.IsLocked = IsLocked;
-               
-            }
-        }
+       
         #endregion
         #region Properties
         public bool IsGuidelineLocked
         {
-            get => _rulerInfo.IsGuidelineLocked;
+            get => _rulerInfo.Guideline.IsLocked;
             set
             {
-                if (_rulerInfo.IsGuidelineLocked == value) return;
+                if (_rulerInfo.Guideline.IsLocked == value) return;
                 _rulerInfo.SuppressNotifications = true;
                 try
                 {
-                    SetProperty(_rulerInfo.IsGuidelineLocked, value, v => _rulerInfo.IsGuidelineLocked = v, nameof(IsGuidelineLocked));
+                    SetProperty(_rulerInfo.Guideline.IsLocked, value, v => _rulerInfo.Guideline.IsLocked = v, nameof(IsGuidelineLocked));
                 }
                 finally
                 {
@@ -127,13 +111,13 @@ namespace Ruler.Wpf.ViewModels
         }
         public bool IsGuideLineVisible
         {
-            get => _rulerInfo.IsGuideLineVisible;
+            get => _rulerInfo.Guideline.IsVisible;
             set
-            {   if (_rulerInfo.IsGuideLineVisible == value) return;
+            {   if (_rulerInfo.Guideline.IsVisible == value) return;
                 _rulerInfo.SuppressNotifications = true;
                 try
                 {
-                    SetProperty(_rulerInfo.IsGuideLineVisible, value, v => _rulerInfo.IsGuideLineVisible = v, nameof(IsGuideLineVisible));
+                    SetProperty(_rulerInfo.Guideline.IsVisible, value, v => _rulerInfo.Guideline.IsVisible = v, nameof(IsGuideLineVisible));
                 }
                 finally
                 {
@@ -143,13 +127,13 @@ namespace Ruler.Wpf.ViewModels
         }
         public double GuideLinePosition
         {
-            get => _rulerInfo.GuideLinePosition;
+            get => _rulerInfo.Guideline.Position;
             set
-            {   if (Math.Abs(_rulerInfo.GuideLinePosition - value) < 0.001) return;
+            {   if (Math.Abs(_rulerInfo.Guideline.Position - value) < 0.001) return;
                 _rulerInfo.SuppressNotifications = true;
                 try
                 {
-                   SetProperty(_rulerInfo.GuideLinePosition, value, v => _rulerInfo.GuideLinePosition = v, nameof(GuideLinePosition));
+                   SetProperty(_rulerInfo.Guideline.Position, value, v => _rulerInfo.Guideline.Position = v, nameof(GuideLinePosition));
                 }
                 finally
                 {
@@ -163,14 +147,14 @@ namespace Ruler.Wpf.ViewModels
         }
         public Color GuideLineColor
         {
-            get => _rulerInfo.GuidelineColor;
+            get => _rulerInfo.Guideline.Color;
             set
                 {
-                if (_rulerInfo.GuidelineColor == value) return;
+                if (_rulerInfo.Guideline.Color == value) return;
                 _rulerInfo.SuppressNotifications = true;
                 try
                 {
-                    SetProperty(_rulerInfo.GuidelineColor, value, v => _rulerInfo.GuidelineColor = v, nameof(GuideLineColor));
+                    SetProperty(_rulerInfo.Guideline.Color, value, v => _rulerInfo.Guideline.Color = v, nameof(GuideLineColor));
                 }
                 finally
                 {
@@ -252,7 +236,23 @@ namespace Ruler.Wpf.ViewModels
             }
         }
     
-        
+        public RulerInfo RulerInformation
+        {
+            get => _rulerInfo;
+            set
+            {
+                if (_rulerInfo == value) return;
+                if (value == null)
+                {
+                    ArgumentNullException a = new ArgumentNullException(nameof(RulerInfo), "RulerInfo is null.");
+                    _loggingService.LogError("Failed to initialize RulerViewModel with null RulerInfo.", a);
+                    MessageBox.Show("An error occurred while initializing the ruler. The application will now close.", "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Application.Current.Shutdown();
+                    return;
+                }
+                _rulerInfo = value;
+            }
+        }
         public double Top
         {
             get => _rulerInfo.Top;
@@ -299,7 +299,7 @@ namespace Ruler.Wpf.ViewModels
                 try
                 {
                     SetProperty(_rulerInfo.Opacity,value, v=> _rulerInfo.Opacity = v,nameof(Opacity));
-                    UpdateOpacitySelection(value);
+                    UpdateOpacitySelection();
                 }
                 finally
                 {
@@ -374,7 +374,7 @@ namespace Ruler.Wpf.ViewModels
                 try
                 {
                     SetProperty(_rulerInfo.SaveType,value, v=> _rulerInfo.SaveType = v,nameof(SaveType));
-                    UpdateSaveTypeSelection(value);
+                    UpdateSaveTypeSelection();
                 }
                 finally
                 {
@@ -384,14 +384,14 @@ namespace Ruler.Wpf.ViewModels
         }
         public bool IsMagnifierEnabled
         {
-            get => _rulerInfo.IsMagnifierEnabled;
+            get => _rulerInfo.Magnifier.IsEnabled;
             set
             {
-                if (_rulerInfo.IsMagnifierEnabled == value) return;
+                if (_rulerInfo.Magnifier.IsEnabled == value) return;
                 _rulerInfo.SuppressNotifications = true;
                 try
                 {
-                   SetProperty(_rulerInfo.IsMagnifierEnabled,value, v=> _rulerInfo.IsMagnifierEnabled = v,nameof(IsMagnifierEnabled));
+                   SetProperty(_rulerInfo.Magnifier.IsEnabled,value, v=> _rulerInfo.Magnifier.IsEnabled = v,nameof(IsMagnifierEnabled));
                 }
                 finally
                 {
@@ -401,15 +401,15 @@ namespace Ruler.Wpf.ViewModels
         }
         public double MagnifierScale
         {
-            get => _rulerInfo.MagnificationScale;
+            get => _rulerInfo.Magnifier.Scale;
             set
             {
-                if (Math.Abs(_rulerInfo.MagnificationScale - value) < 0.001) return;
+                if (Math.Abs(_rulerInfo.Magnifier.Scale - value) < 0.001) return;
                 _rulerInfo.SuppressNotifications = true;
                 try
                 {
-                  SetProperty(_rulerInfo.MagnificationScale,value, v=> _rulerInfo.MagnificationScale = v,nameof(MagnifierScale));
-                    UpdateMagnifierScaleSelection(value);
+                  SetProperty(_rulerInfo.Magnifier.Scale,value, v=> _rulerInfo.Magnifier.Scale = v,nameof(MagnifierScale));
+                    UpdateMagnifierScaleSelection();
                 }
                 finally
                 {
@@ -458,7 +458,7 @@ namespace Ruler.Wpf.ViewModels
 
                 });
             }
-            UpdateOpacitySelection(_rulerInfo.Opacity);
+            UpdateOpacitySelection();
         }
         private void InitializeScales()
         {
@@ -477,7 +477,7 @@ namespace Ruler.Wpf.ViewModels
                     IsSelected = scale == ScaleFactor
                 });
             }
-            UpdateScaleSelection(_rulerInfo.ScaleFactor);
+            UpdateScaleSelection();
         }
         private void InitializeSaveTypes()
         {
@@ -492,7 +492,7 @@ namespace Ruler.Wpf.ViewModels
 
             // Set the default selection (e.g., AllSettings)
             SaveType = SaveTypes.none;
-            UpdateSaveTypeSelection(SaveType);
+            UpdateSaveTypeSelection();
         }
         public void InitializeCommands()
         {
@@ -521,10 +521,18 @@ namespace Ruler.Wpf.ViewModels
                 new ScaleOption { Label = "4x", Value = 4.0 }
             };
             MagnifierScale = 2.0;
-            UpdateMagnifierScaleSelection(MagnifierScale);  
+            UpdateMagnifierScaleSelection();  
         }
         internal void SetInitialState(RulerInfo initialInfo)
         {
+            if (initialInfo == null)
+            {
+                ArgumentNullException a =  new ArgumentNullException(nameof(initialInfo), "Initial RulerInfo cannot be null.");
+                _loggingService.LogError("Failed to initialize RulerViewModel with null RulerInfo.", a);
+                MessageBox.Show("An error occurred while initializing the ruler. The application will now close.", "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.Current.Shutdown();
+                return;
+            }
             _isLoadingState = true;
             _rulerInfo.SuppressNotifications = true;
             try
@@ -552,7 +560,7 @@ namespace Ruler.Wpf.ViewModels
             bool savedHorizontal = w >= h;
 
             // If the saved orientation clashes with the saved dimensions, swap them.
-            if ((_rulerInfo.IsVertical && savedHorizontal) || (!_rulerInfo.IsVertical && !savedHorizontal))
+            if ((_rulerInfo.IsVertical != savedHorizontal))
             {
                 // Swap dimensions in the model to match the orientation
                 _rulerInfo.Width = h;
@@ -591,111 +599,90 @@ namespace Ruler.Wpf.ViewModels
         }
         private void UpdateUnitSelection(MeasurementUnit selectedUnit)
         {
-            foreach (var unit in UnitsOptions)
+            // Set all to false first
+            UnitsOptions.ToList().ForEach(u => u.IsSelected = false);
+
+            // Find the specific one and set it
+            var target = UnitsOptions.FirstOrDefault(u => u.Unit == CurrentUnit);
+            if (target != null)
             {
-                // Ensures type-safe comparison using the Unit property
-               if (unit.Unit == selectedUnit)
-                {
-                    unit.IsSelected = true;
-                    CurrentUnit = selectedUnit;
-                }
-                else
-                {
-                    unit.IsSelected = false;
-                }
+                target.IsSelected = true;
             }
         }
-        private void UpdateSaveTypeSelection(SaveTypes selectedType)
+        public string MonitorDeviceId
         {
-            foreach (var option in SaveTypesOptions)
+            get => _rulerInfo.MonitorDeviceId;
+            set
             {
-                // Ensures only the selected item is marked as checked (mutually exclusive)
-                // Now uses the strongly-typed SaveType property for comparison
-                if (option.SaveType == selectedType)
+                if (_rulerInfo.MonitorDeviceId == value) return;
+                _rulerInfo.SuppressNotifications = true;
+                try
                 {
-                    option.IsSelected = true;
-                    SaveType = selectedType;
-                   
+                   SetProperty(_rulerInfo.MonitorDeviceId,value, v=> _rulerInfo.MonitorDeviceId = v,nameof(MonitorDeviceId));
                 }
-                else
+                finally
                 {
-                    option.IsSelected = false;
+                    _rulerInfo.SuppressNotifications = false;
                 }
             }
         }
+        private void UpdateSaveTypeSelection()
+        {
+            SaveTypesOptions.ToList().ForEach(s => s.IsSelected = false);
+            var target = SaveTypesOptions.FirstOrDefault(s => s.SaveType == SaveType);
+            if (target != null)
+            {
+                target.IsSelected = true;
+            }
+            }
         public void DisableNonPhysicalScales()
         {
-            foreach (var option in ScaleOptions)
+            ScaleOptions.ToList().ForEach(s => s.IsEnabled = false);
+            var target = ScaleOptions.FirstOrDefault(s => s.Value == 1.0);
+            if (target != null)
             {
-                if (option.Value != 1.0)
-                {
-                    option.IsEnabled = false;
-                }
+                target.IsEnabled = true;
+                target.IsSelected = true;
+                ScaleFactor = 1.0;
             }
-            UpdateScaleFlags();
+
+
+           //UpdateScaleFlags();
         }
         public void EnableAllScales()
         {
-            foreach (var option in ScaleOptions)
-            {
-                option.IsEnabled = true;
+           ScaleOptions.ToList().ForEach(s => s.IsEnabled = true);
+            var target = ScaleOptions.FirstOrDefault(s => s.Value == ScaleFactor);
+            if (target != null) {
+                target.IsSelected = true;
             }
-            UpdateScaleFlags();
+           // UpdateScaleFlags();
         }
-        public void UpdateOpacitySelection(double selectedOpacity)
+        public void UpdateOpacitySelection()
         {
-            foreach (var option in OpacityOptions)
+            OpacityOptions.ToList().ForEach(o => o.IsSelected = false);
+            var target = OpacityOptions.FirstOrDefault(o => Math.Abs(o.Value - Opacity) < 0.001);
+            if (target != null)
             {
-                if (option.Value==selectedOpacity)
-                {
-                    option.IsSelected = true;
-                    Opacity = selectedOpacity;
-                }
-                else
-                {
-                    option.IsSelected = false;
-                }
+                target.IsSelected = true;
             }
         }
-        public void UpdateScaleSelection(double selectedScale)
+        public void UpdateScaleSelection()
         {
-            foreach (var option in ScaleOptions)
+            ScaleOptions.ToList().ForEach(s => s.IsSelected=false);
+            var target = ScaleOptions.FirstOrDefault(s => Math.Abs(s.Value - ScaleFactor) < 0.001);
+            if (target != null)
             {
-                if (option.Value==selectedScale)
-                {
-                    if (selectedScale == 0.0)
-                    {
-                        IsAutoScaled = true;
-                        option.IsSelected = true;
-                        return;
-                    }
-                    else
-                    {
-                        IsAutoScaled = false;
-                        option.IsSelected = true;
-                        ScaleFactor = selectedScale;
-                    }
-                                   
-                }
-                else
-                {
-                    option.IsSelected = false; 
-                }
+                target.IsSelected = true;
             }
         }
-        public void UpdateMagnifierScaleSelection(double selectedScale)
+        public void UpdateMagnifierScaleSelection()
         {
-            foreach (var option in MagnifierZoomOptions)
+            MagnifierZoomOptions.ToList().ForEach(o => o.IsSelected = false);
+            var target = MagnifierZoomOptions.FirstOrDefault(o => Math.Abs(o.Value - MagnifierScale) < 0.001);
+            if (target!=null)
             {
-                if (option.Value == selectedScale)
-                {
-                    option.IsSelected = true;
-                    MagnifierScale = selectedScale;
-                }
-                else
-                {
-                    option.IsSelected = false;
-                }
+                target.IsSelected = true;
             }
         }
         #endregion
@@ -708,16 +695,12 @@ namespace Ruler.Wpf.ViewModels
             switch (e.PropertyName)
             {
                 case nameof(Opacity):
-                    UpdateOpacitySelection(_rulerInfo.Opacity);
+                    UpdateOpacitySelection();
                     OnPropertyChanged(nameof(Opacity));
                     break;
                 case nameof(SaveType):
-                    UpdateSaveTypeSelection(_rulerInfo.SaveType);
+                    UpdateSaveTypeSelection();
                     OnPropertyChanged(nameof(SaveType));
-                    break;
-                case nameof(IsAutoScaled):
-                case nameof(ScaleFactor):
-                    UpdateScaleSelection(_rulerInfo.IsAutoScaled ? 0.0 : _rulerInfo.ScaleFactor);
                     break;
                 case nameof(IsLocked):
                     OnPropertyChanged(nameof(WindowResizeMode));
@@ -733,7 +716,7 @@ namespace Ruler.Wpf.ViewModels
                     }
                     break;
                 case nameof(MagnifierScale):
-                    UpdateMagnifierScaleSelection(_rulerInfo.MagnificationScale);
+                    UpdateMagnifierScaleSelection();
                     break;
                 default:
                     _rulerInfo.RefreshAll();
@@ -773,9 +756,9 @@ namespace Ruler.Wpf.ViewModels
         }
         public void ResetDefault(object parameter)
         {
-            RulerInfo defaultRuler = RulerInfo.GetDefaultRulerInfo();
+            RulerInfo defaultRuler = RulerFactory.CreateDefault();
             _isLoadingState = true;
-            RulerInfo.CopyInto(defaultRuler, _rulerInfo);
+            RulerFactory.CopyValues(defaultRuler, _rulerInfo);
             _isLoadingState = false;
         }
         private void ExitApplication(object parameter)
@@ -811,7 +794,7 @@ namespace Ruler.Wpf.ViewModels
         {
            if (parameter is OpacityOption option)
             {
-                UpdateOpacitySelection(option.Value);
+                Opacity= option.Value;
             }
         }
         // Logic for the SetSaveTypeCommand
@@ -819,7 +802,7 @@ namespace Ruler.Wpf.ViewModels
         {
             if (parameter is SaveOption option)
             {
-                UpdateSaveTypeSelection(option.SaveType);
+                SaveType= option.SaveType;
             }
         }
         private void SetMeasurementUnit(object parameter)
@@ -843,7 +826,7 @@ namespace Ruler.Wpf.ViewModels
                 "https://github.com/andrijac/ruler\n" +
                 "Version {0}",
                 $"{version.Major}.{version.Minor}.{version.Build}.{version.MajorRevision}");
-            MessageBox.Show(message, "About Ruler", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowAboutDialog(message);
         }
         #endregion
         public void SetRulerDimensions(double newWidth, double newHeight)
@@ -857,8 +840,47 @@ namespace Ruler.Wpf.ViewModels
         }
         public void UpdateLocation(double left, double top)
         {
-          Left = left;
+            Left = left;
             Top = top;
+        }
+        public ScaleMode ScalingMode
+        {
+            get => _rulerInfo.ScalingMode;
+            set  => _rulerInfo.ScalingMode = value;
+        }
+        public double FinalScale
+        {
+            get
+            {
+                switch (ScalingMode)
+                {
+                    case ScaleMode.Physical:
+                        // Use the raw hardware DPI provided by EnvironmentService
+                        return _currentPhysicalScale;
+
+                    case ScaleMode.Manual:
+                        // Use the exact value the user typed/slid
+                        return this.ManualScaleValue;
+
+                    case ScaleMode.Auto:
+                    default:
+                        // Follow the Windows OS scaling settings
+                        return _currentEffectiveScale;
+                }
+            }
+        }
+        public double CurrentPhysicalScale
+        {
+            get => _currentPhysicalScale;
+            set
+            {
+                if (Math.Abs(_currentPhysicalScale - value) < 0.001) return;
+                SetProperty(ref _currentPhysicalScale, value);
+                if (ScalingMode == ScaleMode.Physical)
+                {
+                    OnPropertyChanged(nameof(FinalScale));
+                }
+            }
         }
         public bool IsInitialized
         {
@@ -895,56 +917,64 @@ namespace Ruler.Wpf.ViewModels
         public ICommand ScaleCommand => _setScaleCommand;
         public ICommand SetUnitCommand => _setUnitCommand;
         public ICommand EnableMagnifierCommand => _enableMagnifierCommand;
-       public void UpdateScaleFlags()
+        public void UpdateScaleFlags()
         {
-           foreach (var option in ScaleOptions)
+            foreach (var option in ScaleOptions)
             {
                 if (IsAutoScaled && option.Value == 0.0)
                 {
+                    ScalingMode = ScaleMode.Auto;
                     option.IsSelected = true;
                 }
-                else if (!IsAutoScaled && option.Value == ScaleFactor)
+                else if (!IsAutoScaled && option.Value >0.0 && option.Value<1.0)
                 {
+                    ScalingMode = ScaleMode.Manual;
                     option.IsSelected = true;
                 }
                 else
                 {
+                    ScalingMode = ScaleMode.Physical;
                     option.IsSelected = false;
                 }
             }
         }
-      
-       public Orientation RulerOrientation
+        public Orientation RulerOrientation
         {
             get => IsVertical ? Orientation.Vertical : Orientation.Horizontal;
         }
-        public double ScaleFactor
-        {
-            get=>_rulerInfo.ScaleFactor;
+        //public double ScaleFactor
+        //{
+        //    get 
+        //    {
+        //        if (IsAutoScaled)
+        //        {
+                    
+        //        }
+        //    }
             
-            set
-            {
-                if (_rulerInfo.ScaleFactor == value )  return;
-                _rulerInfo.SuppressNotifications = true;
-                try
-                {
-                   var scales = IsAutoScaled ? SystemDpiScale : value;
-                //    _loggingService.LogInfo ($"Setting ScaleFactor to: {scales * 100}% (IsAutoScaled: {IsAutoScaled})");
-                    SetProperty(_rulerInfo.ScaleFactor, scales, v => _rulerInfo.ScaleFactor = v, nameof(ScaleFactor));
-                    UpdateScaleSelection(scales);
-                }
-                catch (Exception ex)
-                {
-               //     _loggingService.Log
-               //     ($"Error setting ScaleFactor: {ex.Message}",ex);
-                }
-                finally
-                {
-                    _rulerInfo.SuppressNotifications = false;
-                }
+        //    set
+        //    {
+        //        if (_rulerInfo.ScaleFactor == value )  return;
+        //        _rulerInfo.SuppressNotifications = true;
+        //        try
+        //        {
+        //           var scales = IsAutoScaled ? SystemDpiScale : value;
+        //        //    _loggingService.LogInfo ($"Setting ScaleFactor to: {scales * 100}% (IsAutoScaled: {IsAutoScaled})");
+        //            SetProperty(_rulerInfo.ScaleFactor, scales, v => _rulerInfo.ScaleFactor = v, nameof(ScaleFactor));
+        //            UpdateScaleSelection();
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //       //     _loggingService.Log
+        //       //     ($"Error setting ScaleFactor: {ex.Message}",ex);
+        //        }
+        //        finally
+        //        {
+        //            _rulerInfo.SuppressNotifications = false;
+        //        }
                
-            }
-        }
+        //    }
+        //}
         private void HandleCanvasRotation()
         {
             // Example logic: Swap width and height in the model when rotating
@@ -952,7 +982,7 @@ namespace Ruler.Wpf.ViewModels
             _rulerInfo.Width = _rulerInfo.Height;
             _rulerInfo.Height = temp;
         }
-        public void SetAutoScaleFactor(double systemDpiScale)
+        public void UpdateSystemScale(double systemDpiScale)
         {
             //_loggingService.LogInfo ($"Applying Autoscale: {systemDpiScale * 100}%");
 
@@ -1006,15 +1036,14 @@ namespace Ruler.Wpf.ViewModels
                     if (value==true)
                     {
                         SetProperty(_rulerInfo.IsAutoScaled, true, v => _rulerInfo.IsAutoScaled = v, nameof(IsAutoScaled));
-                        UpdateScaleSelection(0.0);
-
+                        UpdateScaleSelection();
+                        UpdateScaleSelection();
                     }
                     else
                     {
                        SetProperty(_rulerInfo.IsAutoScaled, false, v => _rulerInfo.IsAutoScaled = v, nameof(IsAutoScaled));
-                        UpdateScaleSelection(_rulerInfo.ScaleFactor);
-                    }    
-                  
+                        UpdateScaleSelection();
+                    }
                 }
                finally
                 {

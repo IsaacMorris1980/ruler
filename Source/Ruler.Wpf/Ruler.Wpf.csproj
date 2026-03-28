@@ -158,21 +158,17 @@
     </Compile>
     <Compile Include="Common\ContextMenuExtensions.cs" />
     <Compile Include="Common\EnumExtensions.cs" />
+    <Compile Include="Common\UniversalScale.cs" />
     <Compile Include="Controls\RulerControls.xaml.cs">
       <DependentUpon>RulerControls.xaml</DependentUpon>
     </Compile>
     <Compile Include="Converters\CenterConverter.cs" />
     <Compile Include="Converters\BooleanToResizeModeConverter.cs" />
-    <Compile Include="Enums\MeasurementUnit.cs" />
-    <Compile Include="Models\ModelBase.cs" />
-    <Compile Include="Models\MonitorProfile.cs" />
-    <Compile Include="Models\OptionsBase.cs" />
+    <Compile Include="Services\AppManager.cs" />
     <Compile Include="Services\DialogService.cs" />
     <Compile Include="Services\EnvironmentService.cs" />
     <Compile Include="Services\IDialogService.cs" />
-    <Compile Include="Common\NativeMethods.cs" />
     <Compile Include="Common\Orientation.cs" />
-    <Compile Include="Enums\SaveTypes.cs" />
     <Compile Include="Common\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -181,21 +177,12 @@
     <Compile Include="Common\TickType.cs" />
     <Compile Include="Converters\ValueToBooleanConverter.cs" />
     <Compile Include="Controls\PassthroughBorder.cs" />
-    <Compile Include="Models\IRulerInfo.cs" />
-    <Compile Include="Models\RulerInfo.cs" />
-    <Compile Include="Models\RulerTick.cs" />
-    <Compile Include="Services\ILoggingService.cs" />
     <Compile Include="Services\IEnvironmentService.cs" />
-    <Compile Include="Services\LoggingService.cs" />
-    <Compile Include="Services\Persistence\CommandLineRulerFactory.cs" />
-    <Compile Include="Services\Persistence\Strategy\IPersistenceStrategy.cs" />
-    <Compile Include="Services\Persistence\Strategy\IUnitStrategy.cs" />
-    <Compile Include="Services\Persistence\Strategy\Units\CentimeterUnitStrategy.cs" />
-    <Compile Include="Services\Persistence\Strategy\Units\InchUnitStrategy.cs" />
-    <Compile Include="Services\Persistence\Strategy\Units\MilimeterUnitStrategy.cs" />
-    <Compile Include="Services\Persistence\Strategy\Units\PixelUnitStrategy.cs" />
-    <Compile Include="Services\Persistence\Strategy\Units\PointUnitStrategy.cs" />
+    <Compile Include="Services\IUpdateService.cs" />
+    <Compile Include="Services\IWindowPlacementService.cs" />
+    <Compile Include="Services\RulerDataService.cs" />
     <Compile Include="Services\SavingService.cs" />
+    <Compile Include="Services\WindowPlacementService.cs" />
     <Compile Include="SetSizeWindow.xaml.cs">
       <DependentUpon>SetSizeWindow.xaml</DependentUpon>
     </Compile>
@@ -264,7 +251,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Views\" />
+    <Folder Include="Messages\" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8">
@@ -284,6 +271,12 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="app.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ruler.Shared\Ruler.Shared.csproj">
+      <Project>{EBF29A7A-9FEF-4C14-AB71-52F5C074FCA0}</Project>
+      <Name>Ruler.Shared</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Fody.6.8.2\build\Fody.targets" Condition="Exists('..\packages\Fody.6.8.2\build\Fody.targets')" />
