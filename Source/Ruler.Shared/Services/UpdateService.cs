@@ -1,42 +1,33 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
-using Ruler.Wpf.Models;
+using Ruler.Shared;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
-using System.Text;
+using System.Security.Policy;
 using System.Threading.Tasks;
-using System.Windows;
-
 namespace Ruler.Wpf.Services
 {
     public class UpdateService : IUpdateService
     {
         private bool _isUpdateAvailable;
-        private bool _isBetaUpdateAvailable;
-        private UpdateVersion _latestVersion;
         private GitHubRelease _latestRelease;
-        private GitHubRelease _latestBetaRelease;
+        private string _executablePath;
+        private string _configPath;
         public bool UpdateAvailable { get
                 {
                 return _isUpdateAvailable;
             }
         }
-        public bool BetaUpdateAvailable
-        {
-            get
-            {
-                return _isBetaUpdateAvailable;
-            }
-        }
         public UpdateVersion UserWantsUpdate { get; set; }
         public bool UpdateDownloaded { get; }
-
         public async Task CheckForUpdates()
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
@@ -56,7 +47,6 @@ namespace Ruler.Wpf.Services
                     var releases = JsonConvert.DeserializeObject<List<GitHubRelease>>(responseBody);
 
                     _latestRelease = releases.FirstOrDefault(r => !r.TagName.Contains("Beta"));
-                    _latestBetaRelease = releases.FirstOrDefault(r => r.TagName.Contains("Beta"));
                     Version currentVersion = Assembly.GetEntryAssembly().GetName().Version;
                     if (_latestRelease != null)
                     {
@@ -68,24 +58,14 @@ namespace Ruler.Wpf.Services
                         }
 
                     }
-                    else if (_latestBetaRelease != null)
-                    {
-
-                    }
-
                     // Look for a .zip file in the assets list
-                    foreach (var asset in release.assets)
-                    {
-                        string fileName = asset.name;
-                        if (fileName.EndsWith(".zip"))
-                        {
-                            downloadUrl = asset.browser_download_url;
-                            break;
-                        }
-                    }
+                   GitHubAsset asset = new GitHubAsset();
+                    asset.Name = _latestRelease.Assets.FirstOrDefault(a => a.Name.EndsWith(".zip"))?.Name;
+                    asset.DownloadUrl = _latestRelease.Assets.FirstOrDefault(a => a.Name.EndsWith(".zip"))?.DownloadUrl;
+                    _latestRelease.Assets = new List<GitHubAsset> { asset };
+                     
 
-                    Console.WriteLine($"Found Tag: {tagName}");
-                    Console.WriteLine($"Download: {downloadUrl}");
+
                 }
                 catch (Exception ex)
                 {
@@ -94,20 +74,96 @@ namespace Ruler.Wpf.Services
             }
         }
 
-        public bool DownloadUpdate(string type)
+        public async Task<bool> DownloadUpdateAsync()
         {
-            if (string.Equals(type,"beta",StringComparison.OrdinalIgnoreCase))
+           if (_latestRelease !=null)
             {
-
+                
+                string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update.zip");
+                using (var client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.Add("User-Agent", "MyUpdaterApp");
+                    using (Stream streamToReadFrom = await client.GetStreamAsync(_latestRelease.Assets.First<GitHubAsset>().DownloadUrl))
+                    {
+                        // Open a FileStream to write the data to the destination path
+                        using (Stream streamToWriteTo = File.Open(localPath, FileMode.Create))
+                        {
+                            await streamToReadFrom.CopyToAsync(streamToWriteTo);
+                        }
+                    }
+                }
             }
+            return true;
         }
 
-        public void InstallUpdate(string type)
+        public void InstallUpdate()
         {
-            if (string.Equals(type, "beta", StringComparison.OrdinalIgnoreCase))
-            {
+            string exePath = Assembly.GetEntryAssembly().Location;
+            FileVersionInfo myFileInfo = FileVersionInfo.GetVersionInfo(exePath);
 
+            using (ZipArchive archive = ZipFile.OpenRead(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update.zip")))
+            {
+                foreach (ZipArchiveEntry entry in archive.Entries)
+                {
+                    string destinationPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, entry.FullName);
+                    entry.ExtractToFile(destinationPath, true);
+                    _executablePath = FindMainExe(destinationPath);
+                    FileVersionInfo myFileInfo2 = FileVersionInfo.GetVersionInfo(_executablePath);
+                    if (myFileInfo.InternalName==myFileInfo2.InternalName)
+                    {
+                        LaunchUpdater(_executablePath,exePath);
+                    }
+
+
+                }
             }
+           
         }
+        public void LaunchUpdater(string newExePath,string oldExePath)
+        {
+            // Create a simple batch commands string
+            string batchCommands = $@"
+@echo off
+taskkill /f /im ""{AppDomain.CurrentDomain.FriendlyName}"" > nul 2>&1
+timeout /t 2 /nobreak > nul
+del /f /q ""{oldExePath}""
+move /y ""{newExePath}"" ""{oldExePath}""
+start """" ""{oldExePath}""
+del ""%~f0"""; // This last line makes the batch file delete itself
+
+            string batchPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update.bat");
+            File.WriteAllText(batchPath, batchCommands);
+
+            // Start the batch file
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = batchPath,
+                WindowStyle = ProcessWindowStyle.Hidden, // Keep it quiet
+                UseShellExecute = true
+            };
+
+            Process.Start(psi);
+
+            // Close the current app immediately
+            Environment.Exit(0);
+        }
+        public string FindMainExe(string extractPath)
+        {
+            // Get all .exe files in the folder (and subfolders)
+            var exeFiles = Directory.GetFiles(extractPath, "*.exe", SearchOption.AllDirectories);
+
+            // Filter out common files that aren't your main app
+            var mainExe = exeFiles.FirstOrDefault(f =>
+                f.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+               
+
+            if (mainExe == null)
+            {
+                throw new FileNotFoundException("Could not find a valid .exe in the update package.");
+            }
+
+            return mainExe;
+        }
+       
     }
 }

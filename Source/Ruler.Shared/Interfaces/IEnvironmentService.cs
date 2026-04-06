@@ -1,25 +1,13 @@
-﻿using Ruler.Wpf.ViewModels;
-
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Media;
-
-namespace Ruler.Shared.Interfaces
+﻿using System;
+namespace Ruler.Shared
 {
-
     public interface IEnvironmentService
     {
         /// <summary>
         /// Hooks into the window message loop to handle dragging, DPI changes, and monitor updates.
         /// </summary>
         void RegisterWindow(
-            Window window);
-        
+            IntPtr window);
         /// <summary>
         ///  hooks into the window message loop to handle dragging, DPI changes, and monitor updates.
         /// </summary>

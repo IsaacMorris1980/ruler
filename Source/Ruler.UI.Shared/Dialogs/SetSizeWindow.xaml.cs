@@ -12,12 +12,12 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
-namespace Ruler.Wpf
+namespace Ruler.UI.Shared
 {
     /// <summary>
     /// Interaction logic for SetSizeWindow.xaml
     /// </summary>
-    public partial class SetSizeWindow : Window
+    public partial class SetSizeWindow : UserControl
     {
         public Size NewSize { get; private set; }
 
@@ -38,7 +38,7 @@ namespace Ruler.Wpf
             if (int.TryParse(txtWidth.Text, out int width) && int.TryParse(txtHeight.Text, out int height))
             {
                 NewSize = new Size(width, height);
-                this.DialogResult = true;
+               // this.DialogResult = true;
             }
             else
             {

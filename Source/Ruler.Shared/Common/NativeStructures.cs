@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Ruler.Shared.Common
+namespace Ruler.Shared
 {
     public static class NativeStructures
     {
@@ -15,7 +10,6 @@ namespace Ruler.Shared.Common
             public int x;
             public int y;
         }
-
         [StructLayout(LayoutKind.Sequential)]
         public struct WINDOWPOS
         {

@@ -1,14 +1,5 @@
-﻿using Ruler.Wpf.Enums;
-using Ruler.Wpf.Models;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Ruler.Shared.Models;  
-
-namespace Ruler.Shared.Services
+﻿using System;
+namespace Ruler.Shared
 {
     /// <summary>
     /// Centralized factory for creating and manipulating RulerInfo objects.

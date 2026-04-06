@@ -5,10 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Ruler.Shared.Interfaces;
+using Ruler.Shared;
 using Ruler.Shared.Enums;
 
-namespace Ruler.Shared.Strategies.Units
+namespace Ruler.Shared
 {
     /// <summary>
     /// Defines the specific logic for the DTP Point unit.

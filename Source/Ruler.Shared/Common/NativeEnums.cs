@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ruler.Shared.Common
+namespace Ruler.Shared
 {
     public static class NativeEnums
     {

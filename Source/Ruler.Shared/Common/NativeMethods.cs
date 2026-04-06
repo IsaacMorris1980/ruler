@@ -1,17 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+using static Ruler.Shared.NativeStructures;
 
-using Ruler.Shared.Common;
-
-using static Ruler.Shared.Common.NativeStructures;
-using static Ruler.Shared.Common.NativeEnums;   
-
-namespace Ruler.Shared.Common
+namespace Ruler.Shared
 {
     public static class NativeMethods
     {
@@ -36,7 +27,7 @@ namespace Ruler.Shared.Common
          [DllImport("user32.dll", CharSet = CharSet.Auto)]
         public static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
          [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        public static extern IntPtr WindowFromPoint(Point point);
+        public static extern IntPtr WindowFromPoint(POINT point);
         [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
         public static extern IntPtr GetModuleHandle(string lpModuleName);
 
@@ -47,11 +38,9 @@ namespace Ruler.Shared.Common
         public static extern uint GetDpiForWindow(IntPtr hwnd);
          [DllImport("user32.dll", CharSet = CharSet.Auto)]
         public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
-         [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref Rect lprcMonitor, IntPtr dwData);
+        public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
         [DllImport("User32.dll", CharSet = CharSet.Unicode)]
         public static extern bool EnumDisplayDevices(string lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
-
         public delegate bool MonitorEnumDelegate(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
     
         #endregion

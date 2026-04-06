@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Ruler.Wpf.Enums;
-using Ruler.Shared.Enums;
-
-namespace Ruler.Shared.Interfaces
+﻿namespace Ruler.Shared
 {
     /// <summary>
     /// Defines the contract for all measurement unit strategies.

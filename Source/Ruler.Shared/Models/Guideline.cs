@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media;
 
-namespace Ruler.Shared.Models
+namespace Ruler.Shared
 {
     /// <summary>
     /// Represents the persistent state of a Guideline.
@@ -15,7 +15,7 @@ namespace Ruler.Shared.Models
         private double _position = 0.0;
         private bool _isVisible = false;
         private bool _isLocked = false;
-        private Color _color = Colors.Red;
+        private string _color;
 
         public double Position
         {
@@ -35,9 +35,9 @@ namespace Ruler.Shared.Models
             set => SetProperty(ref _isLocked, value);
         }
 
-        public Color Color
+        public string Color
         {
-            get => _isLocked ? Colors.Blue : _color;
+            get => _color;
             set => SetProperty(ref _color, value);
         }
     }

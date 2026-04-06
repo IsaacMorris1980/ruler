@@ -1,28 +1,11 @@
-﻿using Ruler.Shared.Enums;
-using Ruler.Shared.Models;
-using Ruler.Wpf.Enums;
-using Ruler.Shared.Common.Extentions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Ruler.Shared.Models
+﻿namespace Ruler.Shared
 {
     public abstract class OptionBase : ModelBase
     {
         private bool _isSelected=false;
         private bool _isEnabled=true;
-
-
         public double Value { get; set; }
-
-        
         public string Label { get; set; }
-
-        
         public bool IsSelected
         {
             get => _isSelected;
@@ -33,36 +16,17 @@ namespace Ruler.Shared.Models
             }
         }
         public bool IsEnabled { get=> _isEnabled; set=> SetProperty(ref _isEnabled,value); }
-
-
     }
     public class ScaleOption : OptionBase
     {
         public bool IsAuto { get; set; }
-
         public ScaleOption(double scale)
         {
             Value = scale;
             Label =scale==0?"Auto":$"{scale * 100}%";
             IsAuto = scale==0?true:false;
         }
-        // Helper to create a standard option
-        //public static ScaleOption CreateManual(double scale) => new ScaleOption
-        //{
-        //    Value = scale,
-        //    Label = $"{scale * 100}%",
-        //    IsAuto = false
-        //};
-
-        //// Helper to create the Auto option
-        //public static ScaleOption CreateAuto() => new ScaleOption
-        //{
-        //    Value = 0,
-        //    Label = "Auto",
-        //    IsAuto = true
-        //};
     }
-
     public class OpacityOption : OptionBase
     {
         public OpacityOption(double opacity)
@@ -70,7 +34,6 @@ namespace Ruler.Shared.Models
             Value = opacity;
             Label = $"{(int)(opacity * 100)}%";
         }
-      //  public string PercentageLabel => $"{(double)Value * 100}%";
     }
 
     public class UnitOption : OptionBase
@@ -80,10 +43,8 @@ namespace Ruler.Shared.Models
         public UnitOption(MeasurementUnit unit)
         {
             Unit = unit;
-            Label = unit.GetDescription(); // Auto-generate "Pixels", "Centimeters"
+            Label = unit.GetDescription();
         }
-
-
     }
 
     public class SaveOption : OptionBase
@@ -93,7 +54,7 @@ namespace Ruler.Shared.Models
         public SaveOption(SaveTypes type)
         {
                     SaveType = type;
-            Label = type.GetDescription(); // Auto-generate "All", "Location", etc.
+            Label = type.GetDescription();
         }
     }
 }

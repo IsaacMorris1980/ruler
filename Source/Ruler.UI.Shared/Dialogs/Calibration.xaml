@@ -1,10 +1,7 @@
-﻿<Window x:Class="Ruler.Wpf.CalibrationWindow"
+﻿<UserControl x:Class="Ruler.UI.Shared.CalibrationWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Screen Calibration" Height="500" Width="700"
-        WindowStartupLocation="CenterScreen"
-        Background="#121212" Foreground="White"
-        WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize">
+       >
 
     <Border BorderBrush="#333" BorderThickness="1" CornerRadius="12" Background="#1A1A1A">
         <Grid Margin="30">
@@ -62,9 +59,9 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Smaller" Foreground="#666" VerticalAlignment="Center"/>
-                    <Slider x:Name="WidthSlider" Grid.Column="1" Margin="15,0"
+                    <Slider x:Name="WidthSlider" Margin="22,-11,10,11"
                             Minimum="150" Maximum="600" Value="320"
-                            ValueChanged="WidthSlider_ValueChanged" />
+                            ValueChanged="WidthSlider_ValueChanged" Grid.ColumnSpan="2" />
                     <TextBlock Text="Larger" Foreground="#666" VerticalAlignment="Center" Grid.Column="2"/>
                 </Grid>
 
@@ -83,4 +80,4 @@
             </StackPanel>
         </Grid>
     </Border>
-</Window>
+</UserControl>

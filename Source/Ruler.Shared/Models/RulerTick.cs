@@ -1,12 +1,4 @@
-﻿using Ruler.Wpf.Common;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Ruler.Wpf.Models
+﻿namespace Ruler.Shared
 {
     public class RulerTick
     {

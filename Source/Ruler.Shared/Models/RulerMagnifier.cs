@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Ruler.Shared.Models
+﻿namespace Ruler.Shared
 {
     /// <summary>
     /// Represents the persistent state of the Magnifier.

@@ -9,7 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
-namespace Ruler.Wpf.Controls
+namespace Ruler.UI.Shared
 {
     /// <summary>
     /// A high-performance ruler control that uses a Strategy pattern to handle 

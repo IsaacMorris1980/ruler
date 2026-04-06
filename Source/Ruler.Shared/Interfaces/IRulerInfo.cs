@@ -1,13 +1,6 @@
-﻿using Ruler.Wpf.Common;
-using Ruler.Wpf.Enums;
+﻿using System;
 
-using System;
-using System.Security.AccessControl;
-using System.Windows;
-using System.Windows.Media;
-using Ruler.Shared.Enums;
-
-namespace Ruler.Shared.Interfaces
+namespace Ruler.Shared
 {
     public interface IRulerInfo
     {

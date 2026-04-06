@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Controls;
 
-namespace Ruler.Wpf
+namespace Ruler.UI.Shared
 {
-    public partial class CalibrationWindow : Window
+    public partial class CalibrationWindow : UserControl
     {
         // ISO/IEC 7810 ID-1 standard dimensions in millimeters
         private const double RealCardWidthMm = 85.60;

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.4.11620.152 stable
+VisualStudioVersion = 18.4.11620.152
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler", "Ruler\Ruler.csproj", "{FCB0DDB2-AD8B-4080-A17D-732EFBF448C7}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Wpf", "Ruler.Wpf\Ruler.Wpf.csproj", "{73BEFA42-D277-49C4-8BBA-15CEC84E7E54}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Shared", "Ruler.Shared\Ruler.Shared.csproj", "{EBF29A7A-9FEF-4C14-AB71-52F5C074FCA0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.UI.Shared", "Ruler.UI.Shared\Ruler.UI.Shared.csproj", "{F2B6C30D-BB54-45D9-8355-CED5A403FA03}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{EBF29A7A-9FEF-4C14-AB71-52F5C074FCA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EBF29A7A-9FEF-4C14-AB71-52F5C074FCA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EBF29A7A-9FEF-4C14-AB71-52F5C074FCA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2B6C30D-BB54-45D9-8355-CED5A403FA03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2B6C30D-BB54-45D9-8355-CED5A403FA03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2B6C30D-BB54-45D9-8355-CED5A403FA03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2B6C30D-BB54-45D9-8355-CED5A403FA03}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

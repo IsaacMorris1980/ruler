@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ruler.Shared.Models
+namespace Ruler.Shared
 {
     /// <summary>
     /// Represents a specific hardware monitor configuration. 

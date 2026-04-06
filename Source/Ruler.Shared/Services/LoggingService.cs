@@ -1,21 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Ruler.Shared.Interfaces;
 
-namespace Ruler.Shared.Services
+namespace Ruler.Shared
 {
     /// <summary>
     /// Simple implementation that outputs to the Debug console with class context.
     /// </summary>
-    public class DebugLoggingService<T> : ILoggingService<T>
+    public class LoggingService<T> : ILoggingService<T>
     {
         private readonly string _className;
 
-        public DebugLoggingService()
+        public LoggingService()
         {
             _className = typeof(T).Name;
         }

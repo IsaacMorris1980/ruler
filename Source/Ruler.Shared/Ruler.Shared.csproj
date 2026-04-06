@@ -31,8 +31,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -48,6 +53,7 @@
     <Compile Include="Common\NativeStructures.cs" />
     <Compile Include="Enums\MeasurementUnit.cs" />
     <Compile Include="Enums\MonitorDpiType.cs" />
+    <Compile Include="Enums\ResizeEdge.cs" />
     <Compile Include="Enums\SaveTypes.cs" />
     <Compile Include="Enums\ScaleMode.cs" />
     <Compile Include="Enums\TickScaleMode.cs" />
@@ -66,6 +72,7 @@
     <Compile Include="Interfaces\IUnitStrategy.cs" />
     <Compile Include="Interfaces\IUpdateService.cs" />
     <Compile Include="Interfaces\IWindowPlacementService.cs" />
+    <Compile Include="Math\RulerMath.cs" />
     <Compile Include="Models\GitHubAsset.cs" />
     <Compile Include="Models\GitHubRelease.cs" />
     <Compile Include="Models\Guideline.cs" />
@@ -74,6 +81,7 @@
     <Compile Include="Models\OptionsBase.cs" />
     <Compile Include="Models\RulerInfo.cs" />
     <Compile Include="Models\RulerMagnifier.cs" />
+    <Compile Include="Models\RulerSettings.cs" />
     <Compile Include="Models\RulerTick.cs" />
     <Compile Include="Models\UpdateVersion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -90,7 +98,11 @@
     <Compile Include="Strategies\Units\MilimeterUnitStrategy.cs" />
     <Compile Include="Strategies\Units\PixelUnitStrategy.cs" />
     <Compile Include="Strategies\Units\PointUnitStrategy.cs" />
+    <Compile Include="ViewModels\RulerViewModel.cs" />
+    <Compile Include="ViewModels\ViewModelBase.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

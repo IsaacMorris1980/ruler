@@ -1,14 +1,14 @@
 ﻿using Ruler.Wpf.Enums;
-using Ruler.Shared.Interfaces;
+using Ruler.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Ruler.Shared.Enums;
-using Ruler.Shared.Strategies.Units;
+using Ruler.Shared;
 
-namespace Ruler.Shared.Strategies
+namespace Ruler.Shared
 {
     public class UnitStrategyFactory
     {

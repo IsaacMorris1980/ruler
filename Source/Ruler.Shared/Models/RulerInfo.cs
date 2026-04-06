@@ -1,10 +1,6 @@
-﻿using Ruler.Shared.Interfaces;
-using Ruler.Shared.Enums;
-using Ruler.Shared.Models;
+﻿using System;
 
-using System;
-
-namespace Ruler.Shared.Models
+namespace Ruler.Shared
 {
     public class RulerInfo:ModelBase, IRulerInfo
     {

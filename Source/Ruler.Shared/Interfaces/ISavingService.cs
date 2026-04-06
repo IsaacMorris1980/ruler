@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Ruler.Shared.Interfaces
+namespace Ruler.Shared
 {
     public interface ISavingService
     {

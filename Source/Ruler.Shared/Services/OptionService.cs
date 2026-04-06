@@ -1,18 +1,7 @@
-﻿using Ruler.Wpf.Enums;
-using Ruler.Wpf.Models;
-
-using System;
-using System.Collections.Generic;
+﻿
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Ruler.Shared.Enums;
-using Ruler.Shared.Models;
-using Ruler.Shared.Interfaces;
 
-namespace Ruler.Shared.Services
+namespace Ruler.Shared
 {
     public class OptionService : IOptionService
     {
@@ -53,7 +42,6 @@ namespace Ruler.Shared.Services
                 new SaveOption(SaveTypes.size),
                 new SaveOption(SaveTypes.none)
             };
-
         }
     }
 }

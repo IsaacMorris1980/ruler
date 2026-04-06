@@ -1,76 +1,76 @@
 ﻿
 using System;
 using System.Collections.Generic;
-using Ruler.Shared.Models;
-using Ruler.Shared.Interfaces;
-
-using static Ruler.Wpf.Common.NativeMethods;
 using System.Runtime.InteropServices;
-using static Ruler.Shared.Common.NativeStructures;
-using static Ruler.Shared.Common.NativeMethods;
-using static Ruler.Shared.Common.NativeEnums;
-using static Ruler.Shared.Common.NativeConstants;
-namespace Ruler.Shared.Hardware
+namespace Ruler.Shared
 {
     public class HardwareMonitorService : IHardwareMonitorService
     {
-        public List<MonitorProfile> GetActiveHardwareProfiles()
+        /// <summary>
+        /// Gets the effective DPI for the monitor where the window is located.
+        /// Uses NativeMethods to bridge to Shcore.dll.
+        /// </summary>
+        public double GetEffectiveDpi(IntPtr windowHandle)
         {
-            var profiles = new List<MonitorProfile>();
-
-            foreach (var screen in Screen.AllScreens)
+            // 1. Get the Monitor Handle from the Window Handle
+            IntPtr hMonitor = NativeMethods.MonitorFromWindow(
+                windowHandle,
+                NativeConstants.MONITOR_DEFAULTTONEAREST);
+            if (hMonitor != IntPtr.Zero)
             {
-                DISPLAY_DEVICE monitorDevice = new DISPLAY_DEVICE();
-                monitorDevice.cb = Marshal.SizeOf(monitorDevice);
-                string friendlyName = "Unknown Monitor";
-
-                if (EnumDisplayDevices(screen.DeviceName, 0, ref monitorDevice, 0))
+                // 2. Get the DPI from the Monitor Handle
+                int result = NativeMethods.GetDpiForMonitor(
+                    hMonitor,
+                    MonitorDpiType.EffectiveDpi,
+                    out uint dpiX,
+                    out uint dpiY);
+                if (result == NativeConstants.S_OK)
                 {
-                    friendlyName = monitorDevice.DeviceString;
+                    return (double)dpiX;
                 }
-
-                var centerPoint = new NativeMethods.POINT
-                {
-                    x = screen.Bounds.X + (screen.Bounds.Width / 2),
-                    y = screen.Bounds.Y + (screen.Bounds.Height / 2)
-                };
-
-                IntPtr hMonitor = MonitorFromPoint(centerPoint, MONITOR_DEFAULTTONEAREST);
-
-                GetDpiForMonitor(hMonitor, MonitorDpiType.RawDpi, out uint rawDpi, out _);
-                GetDpiForMonitor(hMonitor, MonitorDpiType.EffectiveDpi, out uint effectiveDpi, out _);
-
-                bool isGeneric = friendlyName != null &&
-                               friendlyName.IndexOf("Generic", StringComparison.OrdinalIgnoreCase) >= 0;
-
-                profiles.Add(new MonitorProfile()
-                {
-                    MonitorId = screen.DeviceName,
-                    MonitorName = friendlyName,
-                    HardwareDpi = (double)rawDpi,
-                    OSDpi = effectiveDpi / 96.0,
-                    IsGeneric = isGeneric,
-                    LastUsed = DateTime.Now,
-                    CalibratedDpi = 1.0
-                });
             }
-
-            return profiles;
+            return 96.0; // Standard fallback (100% scaling)
         }
-
-        public double GetDpiScale(IntPtr windowHandle)
+        /// <summary>
+        /// Generates a stable ID for the monitor to persist ruler positions.
+        /// </summary>
+        public string GetHardwareId(IntPtr windowHandle)
         {
-            var hMonitor = MonitorFromWindow(windowHandle, MONITOR_DEFAULTTONEAREST);
-            if (GetDpiForMonitor(hMonitor, MonitorDpiType.EffectiveDpi, out uint dpiX, out _) == 0)
+            IntPtr hMonitor = NativeMethods.MonitorFromWindow(
+                windowHandle,
+                NativeConstants.MONITOR_DEFAULTTONEAREST);
+            // We use the Monitor Info structure to get the Device Name (e.g., \\.\DISPLAY1)
+            NativeStructures.MONITORINFOEX info = new NativeStructures.MONITORINFOEX();
+            info.Size = Marshal.SizeOf(info);
+            if (NativeMethods.GetMonitorInfo(hMonitor, ref info))
             {
-                return dpiX / 96.0;
+                return info.DeviceName.TrimEnd('\0');
             }
-            return 1.0;
+            return "Unknown_Monitor";
         }
-
-        public IntPtr GetMonitorHandleFromWindow(IntPtr windowHandle)
+        public IntPtr GetMonitorHandle(IntPtr windowHandle)
         {
-            return MonitorFromWindow(windowHandle, MONITOR_DEFAULTTONEAREST);
+            return NativeMethods.MonitorFromWindow(
+                windowHandle,
+                NativeConstants.MONITOR_DEFAULTTONEAREST);
+        }
+        /// <summary>
+        /// Returns all hardware profiles (monitors) currently recognized by the OS.
+        /// </summary>
+        public List<string> GetActiveHardwareProfiles()
+        {
+            var profiles = new List<string>();
+            NativeMethods.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (hMonitor, hdc, lprc, lparam) =>
+            {
+                NativeStructures.MONITORINFOEX info = new NativeStructures.MONITORINFOEX();
+                info.Size = Marshal.SizeOf(info);
+                if (NativeMethods.GetMonitorInfo(hMonitor, ref info))
+                {
+                    profiles.Add(new string(info.DeviceName).TrimEnd('\0'));
+                }
+                return true;
+            }, IntPtr.Zero);
+            return profiles;
         }
     }
 }

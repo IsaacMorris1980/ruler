@@ -2,7 +2,7 @@
 
 using Ruler.Wpf.Common;
 using Ruler.Wpf.Enums;
-using Ruler.Wpf.Models;
+using Ruler.Shared;
 using Ruler.Wpf.Services;
 using Ruler.Wpf.Services.Persistence;
 using Ruler.Wpf.Services.Persistence.Strategy;
@@ -17,7 +17,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace Ruler.Wpf.ViewModels
+namespace Ruler.Wpf
 {
     // The core ViewModel class for the Ruler application
     public class RulerViewModel : ViewModelBase

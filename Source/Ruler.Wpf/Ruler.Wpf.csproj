@@ -153,22 +153,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Calibration.xaml.cs">
-      <DependentUpon>Calibration.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Common\ContextMenuExtensions.cs" />
-    <Compile Include="Common\EnumExtensions.cs" />
     <Compile Include="Common\UniversalScale.cs" />
-    <Compile Include="Controls\RulerControls.xaml.cs">
-      <DependentUpon>RulerControls.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Converters\CenterConverter.cs" />
     <Compile Include="Converters\BooleanToResizeModeConverter.cs" />
     <Compile Include="Services\AppManager.cs" />
     <Compile Include="Services\DialogService.cs" />
     <Compile Include="Services\EnvironmentService.cs" />
     <Compile Include="Services\IDialogService.cs" />
-    <Compile Include="Common\Orientation.cs" />
     <Compile Include="Common\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -176,26 +168,10 @@
     </Compile>
     <Compile Include="Common\TickType.cs" />
     <Compile Include="Converters\ValueToBooleanConverter.cs" />
-    <Compile Include="Controls\PassthroughBorder.cs" />
     <Compile Include="Services\IEnvironmentService.cs" />
-    <Compile Include="Services\IUpdateService.cs" />
     <Compile Include="Services\IWindowPlacementService.cs" />
-    <Compile Include="Services\RulerDataService.cs" />
     <Compile Include="Services\SavingService.cs" />
     <Compile Include="Services\WindowPlacementService.cs" />
-    <Compile Include="SetSizeWindow.xaml.cs">
-      <DependentUpon>SetSizeWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="ViewModels\RulerViewModel.cs" />
-    <Compile Include="ViewModels\ViewModelBase.cs" />
-    <Page Include="Calibration.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\RulerControls.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -209,10 +185,6 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="SetSizeWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">

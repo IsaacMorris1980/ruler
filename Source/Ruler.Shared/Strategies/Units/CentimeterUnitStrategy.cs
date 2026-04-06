@@ -1,5 +1,5 @@
 ﻿using Ruler.Shared.Enums;
-using Ruler.Shared.Interfaces;
+using Ruler.Shared;
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ruler.Shared.Strategies.Units
+namespace Ruler.Shared
 {
     /// <summary>
     /// Defines the specific logic for the Metric Centimeter unit.

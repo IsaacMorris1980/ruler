@@ -1,14 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using static Ruler.Shared.Common.NativeStructures;
-
-using static Ruler.Wpf.Common.NativeMethods;
-
-namespace Ruler.Shared.Interfaces
+﻿namespace Ruler.Shared
 {
     public interface IWindowPlacementService
     {

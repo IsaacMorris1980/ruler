@@ -1,16 +1,16 @@
 ﻿
-using Ruler.Wpf.Models;
+using Ruler.Shared;
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Ruler.Shared.Interfaces;
+using Ruler.Shared;
 using Ruler.Shared.Enums;
-using Ruler.Shared.Models;
+using Ruler.Shared;
 
-namespace Ruler.Shared.Strategies.Units
+namespace Ruler.Shared
 {
     /// <summary>
     /// Defines the specific logic for the Metric Millimeter unit.

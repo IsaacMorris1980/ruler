@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Ruler.Shared.Interfaces
+﻿using System.Collections.Generic;
+namespace Ruler.Shared
 {
     // 2. An interface for "Preprocessing" data (e.g., the RulerInfo stripping logic)
     public interface IDataPreprocessor<T>

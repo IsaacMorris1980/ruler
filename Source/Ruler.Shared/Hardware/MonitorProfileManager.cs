@@ -1,54 +1,67 @@
-﻿using Ruler.Wpf.Models;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using Ruler.Shared.Interfaces;
-using Ruler.Shared.Models;
-
-namespace Ruler.Shared.Hardware
+namespace Ruler.Shared
 {
     public class MonitorProfileManager : IMonitorProfileManager
     {
         private readonly IHardwareMonitorService _hardware;
         private readonly ISavingService _persistence;
         private List<MonitorProfile> _profiles;
-        private ILoggingService<MonitorProfileManager> _logger;
-
+        private readonly ILoggingService<MonitorProfileManager> _logger;
         public List<MonitorProfile> Profiles => _profiles ?? new List<MonitorProfile>();
-
-        public MonitorProfileManager(IHardwareMonitorService hardware, ISavingService persistence,ILoggingService<MonitorProfileManager> logger)
+        public MonitorProfileManager(IHardwareMonitorService hardware, ISavingService persistence, ILoggingService<MonitorProfileManager> logger)
         {
             _hardware = hardware;
             _persistence = persistence;
             _logger = logger;
         }
-
         public void Initialize()
         {
-            var saved = _persistence.Load<MonitorProfile>() ?? new List<MonitorProfile>();
-            var active = _hardware.GetActiveHardwareProfiles();
-            var activeMonitorIds = active
-               .Select(p => p.MonitorId)
-               .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var  newsaved = saved.Where(r=>activeMonitorIds.Contains(r.MonitorId)).ToList();
-           List<MonitorProfile> newactive = active.Where(r=>!newsaved.Any(s=>s.MonitorId==r.MonitorId)).ToList();
-             newsaved.AddRange(newactive);
-            
-            // Synchronize logic
-
-            _profiles = newsaved;
+            // 1. Load existing profiles from disk
+            var savedProfiles = _persistence.Load<MonitorProfile>() ?? new List<MonitorProfile>();
+            // 2. Get currently connected hardware
+            var activeHardware = _hardware.GetActiveHardwareProfiles();
+            // 3. Mark all saved profiles as inactive by default
+            foreach (var profile in savedProfiles)
+            {
+                profile.IsActive = false;
+            }
+            // 4. Update existing or add new active monitors
+            foreach (var hardwareProfile in activeHardware)
+            {
+                var existing = savedProfiles.FirstOrDefault(p =>
+                    p.MonitorId.Equals(hardwareProfile.MonitorId, StringComparison.OrdinalIgnoreCase));
+                if (existing != null)
+                {
+                    // Monitor is plugged in. Update transient properties but KEEP calibration data.
+                    existing.IsActive = true;
+                    existing.MonitorName = hardwareProfile.MonitorName;
+                    existing.HardwareDpi = hardwareProfile.HardwareDpi;
+                    existing.OSDpi = hardwareProfile.OSDpi;
+                    existing.LastUsed = DateTime.Now;
+                }
+                else
+                {
+                    // Completely new monitor detected. Add it to the list.
+                    hardwareProfile.IsActive = true;
+                    savedProfiles.Add(hardwareProfile);
+                }
+            }
+            _profiles = savedProfiles;
         }
-
         public MonitorProfile GetProfile(string deviceId)
         {
-            return _profiles?.FirstOrDefault(p => p.MonitorId == deviceId)
-                   ?? _profiles?.FirstOrDefault(p => p.MonitorId == Screen.PrimaryScreen.DeviceName);
+            // 1. Try to find the specific requested monitor
+            var requestedProfile = _profiles?.FirstOrDefault(p => p.MonitorId == deviceId);
+            if (requestedProfile != null)
+            {
+                return requestedProfile;
+            }
+            // 2. Fallback: If not found, safely return the first ACTIVE monitor
+            // This replaces the WinForms Screen.PrimaryScreen dependency
+            return _profiles?.FirstOrDefault(p => p.IsActive) ?? _profiles?.FirstOrDefault();
         }
-
         public void UpdateProfile(MonitorProfile profile)
         {
             var existing = _profiles.FirstOrDefault(m => m.MonitorId == profile.MonitorId);
@@ -64,7 +77,6 @@ namespace Ruler.Shared.Hardware
                 _profiles.Add(profile);
             }
         }
-
         public void Save() => _persistence.Save(_profiles);
     }
 }
