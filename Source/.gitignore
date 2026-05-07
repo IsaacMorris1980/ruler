@@ -1,0 +1,41 @@
+## --- PROJECT SPECIFIC ---
+# Ignore the Secrets folder entirely (contains PFX and Private Keys)
+/Secrets/
+
+# Ignore the Generator's specific release outputs
+# (Adjust the path if your output folder is named differently)
+/Ruler.Generator/bin/
+/Ruler.Generator/obj/
+/Ruler.Generator/Release/
+
+## --- SECURITY & SECRETS ---
+*.pfx
+*.p12
+*.snk
+*.vsign
+*.sig
+# If you save your RSA private key to a file
+*.xml
+*.key
+
+## --- VISUAL STUDIO DEFAULTS ---
+.vs/
+[Dd]ebug/
+[Rr]elease/
+bin/
+obj/
+*.user
+*.suo
+
+## --- NUGET & DEPENDENCIES ---
+packages/
+!packages/repositories.config
+*.nuget.props
+*.nuget.targets
+
+## --- COSTURA & FODY ---
+FodyWeavers.xsd
+
+## --- OS SPECIFIC ---
+.DS_Store
+Thumbs.db
