@@ -1,13 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.4.11620.152 stable
+VisualStudioVersion = 18.4.11620.152
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler", "Ruler\Ruler.csproj", "{FCB0DDB2-AD8B-4080-A17D-732EFBF448C7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Tests", "Ruler.Tests\Ruler.Tests.csproj", "{6EEC3011-3871-49AC-BA14-87E3EA3E2D84}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Shared", "Ruler.Shared\Ruler.Shared.csproj", "{B66439FF-BC75-469F-99FA-70AC0BAC4E7A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.UI", "Ruler.UI\Ruler.UI.csproj", "{BA8EA713-058B-40B2-8E2D-40BB3B2F665C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Generator", "Ruler.Generator\Ruler.Generator.csproj", "{31729C9C-971A-4CEB-9B81-23EA3DEF8860}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Updator", "Ruler.Updator\Ruler.Updator.csproj", "{FA57A586-6FCC-4489-A548-C3C18C5A5A04}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +33,18 @@ Global
 		{B66439FF-BC75-469F-99FA-70AC0BAC4E7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B66439FF-BC75-469F-99FA-70AC0BAC4E7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B66439FF-BC75-469F-99FA-70AC0BAC4E7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA8EA713-058B-40B2-8E2D-40BB3B2F665C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA8EA713-058B-40B2-8E2D-40BB3B2F665C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA8EA713-058B-40B2-8E2D-40BB3B2F665C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA8EA713-058B-40B2-8E2D-40BB3B2F665C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31729C9C-971A-4CEB-9B81-23EA3DEF8860}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31729C9C-971A-4CEB-9B81-23EA3DEF8860}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31729C9C-971A-4CEB-9B81-23EA3DEF8860}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31729C9C-971A-4CEB-9B81-23EA3DEF8860}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA57A586-6FCC-4489-A548-C3C18C5A5A04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA57A586-6FCC-4489-A548-C3C18C5A5A04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA57A586-6FCC-4489-A548-C3C18C5A5A04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA57A586-6FCC-4489-A548-C3C18C5A5A04}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

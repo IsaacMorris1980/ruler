@@ -27,23 +27,24 @@ namespace Ruler
         {
             try
             {
-                // 1. Collect RulerInfo from all open MainForms
-                // We use .ToList() to snap the current state of open windows
                 if (savingrulers == null) { return; }
 
                 var saverulers = savingrulers
                     .OfType<MainForm>()
                     .Select(f => f.RulerData) 
                     .ToList();
-
-                // 2. Run the data through your Preprocessor (stripping based on SaveType)
                 IEnumerable<RulerInfo> processedData = _preprocessor.Preprocess(saverulers);
+                string rawJson = SettingsService.SerializeRulers(processedData);
+                string signature = SecurityService.SignWithMachineKey(rawJson);
+                var signedPackage = new SignedSettings
+                {
+                    Data = rawJson,
+                    Signature = signature
+                };
+                string finalPayload = JsonConvert.SerializeObject(signedPackage);
 
-                // 3. Serialize to JSON using your Library's SettingsService (Newtonsoft)
-                string json = SettingsService.SerializeRulers(processedData);
-                // 4. Save to the actual exe.config
-              Properties.Settings.Default.RulerCollection = json;
-              Properties.Settings.Default.Save();
+                Properties.Settings.Default.RulerCollection = finalPayload;
+                Properties.Settings.Default.Save();
             }
             catch (Exception ex)
             {
@@ -60,27 +61,40 @@ namespace Ruler
         {
             try
             {
-                // 1. Pull the raw string from the config file
-                string json = Properties.Settings.Default.RulerCollection;
+                string payload = Properties.Settings.Default.RulerCollection;
 
-                // 2. Deserialize using the Library Service
-                // Note: DeserializeRulers should return a default ruler if the string is empty
-                currentrulers = SettingsService.DeserializeRulers(json);
-
-                // 3. If no saved rulers exist, create one default ruler to start with
-                if (currentrulers == null || !currentrulers.Any())
+                if (string.IsNullOrEmpty(payload))
                 {
-                   currentrulers = new List<RulerInfo> { RulerFactory.CreateDefault() };
-                   
+                    return new List<RulerInfo>(){ RulerFactory.CreateDefault() };
                 }
-                return currentrulers;
+
+                // 1. Unpack the SignedSettings envelope
+                var package = JsonConvert.DeserializeObject<SignedSettings>(payload);
+
+                // 2. Verify the data against the signature
+                if (SecurityService.VerifyWithMachineKey(package.Data, package.Signature))
+                {
+                    // 3. Signature is valid: Deserialize the actual RulerInfo list
+                    currentrulers = SettingsService.DeserializeRulers(package.Data);
+                }
+                else
+                {
+                    // Signature is INVALID: Data was tampered with or corrupted
+                    Console.WriteLine("Security verification failed for saved rulers.");
+                    return new List<RulerInfo>() { RulerFactory.CreateDefault() };
+                }
+
+                // Ensure we actually have data after deserialization
+                return (currentrulers != null && currentrulers.Any())
+                       ? currentrulers
+                       : new List<RulerInfo>(){ RulerFactory.CreateDefault() };
             }
             catch (Exception ex)
             {
-                // Fallback: If loading fails, open at least one default ruler
                 Console.WriteLine($"Failed to load settings: {ex.Message}");
-               return new List<RulerInfo> { RulerFactory.CreateDefault() };
+                return new List<RulerInfo>(){ RulerFactory.CreateDefault() };
             }
         }
     }
+    
 }

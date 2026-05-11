@@ -9,6 +9,9 @@ using Ruler.Shared.Models;
 
 namespace Ruler.Shared.Models
 {
+    /// <summary>
+    /// Represents a Release object returned from the GitHub API.
+    /// </summary>
     public class GitHubRelease
     {
         [JsonProperty("tag_name")]
@@ -17,11 +20,17 @@ namespace Ruler.Shared.Models
         [JsonProperty("name")]
         public string Name { get; set; }
 
+        [JsonProperty("body")]
+        public string Body { get; set; } // This usually contains the Release Notes
+
+        [JsonProperty("draft")]
+        public bool IsDraft { get; set; }
+
         [JsonProperty("prerelease")]
         public bool IsPrerelease { get; set; }
 
-        [JsonProperty("body")]
-        public string Description { get; set; }
+        [JsonProperty("published_at")]
+        public DateTime PublishedAt { get; set; }
 
         [JsonProperty("assets")]
         public List<GitHubAsset> Assets { get; set; }
