@@ -27,6 +27,7 @@ namespace Ruler.Generator
             using (var pfxDialog = new OpenFileDialog())
             {
                 pfxDialog.Filter = "PFX files (*.pfx)|*.pfx|All files (*.*)|*.*";
+                pfxDialog.Title = "Select the PFX Certificate";
                 if (pfxDialog.ShowDialog() == DialogResult.OK)
                 {
                     textBoxPfxPath.Text = pfxDialog.FileName;
@@ -36,22 +37,26 @@ namespace Ruler.Generator
             using (var exeDialogn = new OpenFileDialog())
             {
                 exeDialogn.Filter = "Executable files (*.exe)|*.exe|All files (*.*)|*.*";
+                exeDialogn.Title = "Select the Ruler Executable";
                 if (exeDialogn.ShowDialog() == DialogResult.OK)
                 {
                     textBoxExePath.Text = exeDialogn.FileName;
                     rulerexePath = exeDialogn.FileName;
                     rulerVersion = new Version(GetAssemblyVersion(rulerexePath));
+                   textEXEVersion.Text = GetAssemblyVersion(rulerexePath);
 
                 }
             }
             using (var exeDialog = new OpenFileDialog())
             {
                 exeDialog.Filter = "Executable files (*.exe)|*.exe|All files (*.*)|*.*";
+                exeDialog.Title = "Select the Updater Executable";
                 if (exeDialog.ShowDialog() == DialogResult.OK)
                 {
                     textBoxUpdateExePath.Text = exeDialog.FileName;
                     unpdateexePath = exeDialog.FileName;
                     updaterVersion = new Version(GetAssemblyVersion(unpdateexePath));
+                    textboxUpdaterVersion.Text = GetAssemblyVersion(unpdateexePath);
 
                 }
             }
@@ -69,6 +74,11 @@ namespace Ruler.Generator
             {
                 return "0.0.0.0";
             }
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

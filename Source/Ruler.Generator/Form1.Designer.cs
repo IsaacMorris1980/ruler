@@ -33,15 +33,15 @@
             this.label3 = new System.Windows.Forms.Label();
             this.textBoxPfxPath = new System.Windows.Forms.TextBox();
             this.textBoxExePath = new System.Windows.Forms.TextBox();
-            this.textBox3 = new System.Windows.Forms.TextBox();
+            this.textBoxUpdateExePath = new System.Windows.Forms.TextBox();
             this.button4 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
             this.button6 = new System.Windows.Forms.Button();
             this.button7 = new System.Windows.Forms.Button();
             this.label4 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
-            this.textBox4 = new System.Windows.Forms.TextBox();
-            this.textBoxUpdateExePath = new System.Windows.Forms.TextBox();
+            this.textEXEVersion = new System.Windows.Forms.TextBox();
+            this.textboxUpdaterVersion = new System.Windows.Forms.TextBox();
             this.button1 = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
@@ -74,27 +74,27 @@
             // 
             // textBoxPfxPath
             // 
-            this.textBoxPfxPath.Enabled = false;
             this.textBoxPfxPath.Location = new System.Drawing.Point(245, 54);
             this.textBoxPfxPath.Name = "textBoxPfxPath";
+            this.textBoxPfxPath.ReadOnly = true;
             this.textBoxPfxPath.Size = new System.Drawing.Size(378, 20);
             this.textBoxPfxPath.TabIndex = 3;
             // 
             // textBoxExePath
             // 
-            this.textBoxExePath.Enabled = false;
             this.textBoxExePath.Location = new System.Drawing.Point(245, 112);
             this.textBoxExePath.Name = "textBoxExePath";
+            this.textBoxExePath.ReadOnly = true;
             this.textBoxExePath.Size = new System.Drawing.Size(378, 20);
             this.textBoxExePath.TabIndex = 4;
             // 
-            // textBox3
+            // textBoxUpdateExePath
             // 
-            this.textBox3.Enabled = false;
-            this.textBox3.Location = new System.Drawing.Point(245, 182);
-            this.textBox3.Name = "textBox3";
-            this.textBox3.Size = new System.Drawing.Size(378, 20);
-            this.textBox3.TabIndex = 5;
+            this.textBoxUpdateExePath.Location = new System.Drawing.Point(245, 182);
+            this.textBoxUpdateExePath.Name = "textBoxUpdateExePath";
+            this.textBoxUpdateExePath.ReadOnly = true;
+            this.textBoxUpdateExePath.Size = new System.Drawing.Size(378, 20);
+            this.textBoxUpdateExePath.TabIndex = 5;
             // 
             // button4
             // 
@@ -132,6 +132,7 @@
             this.button7.TabIndex = 12;
             this.button7.Text = "Create Signed Release";
             this.button7.UseVisualStyleBackColor = true;
+            this.button7.Click += new System.EventHandler(this.button7_Click);
             // 
             // label4
             // 
@@ -151,21 +152,21 @@
             this.label5.TabIndex = 14;
             this.label5.Text = "Updater Version";
             // 
-            // textBox4
+            // textEXEVersion
             // 
-            this.textBox4.Enabled = false;
-            this.textBox4.Location = new System.Drawing.Point(506, 259);
-            this.textBox4.Name = "textBox4";
-            this.textBox4.Size = new System.Drawing.Size(136, 20);
-            this.textBox4.TabIndex = 15;
+            this.textEXEVersion.Location = new System.Drawing.Point(506, 259);
+            this.textEXEVersion.Name = "textEXEVersion";
+            this.textEXEVersion.ReadOnly = true;
+            this.textEXEVersion.Size = new System.Drawing.Size(136, 20);
+            this.textEXEVersion.TabIndex = 15;
             // 
-            // textBoxUpdateExePath
+            // textboxUpdaterVersion
             // 
-            this.textBoxUpdateExePath.Enabled = false;
-            this.textBoxUpdateExePath.Location = new System.Drawing.Point(506, 311);
-            this.textBoxUpdateExePath.Name = "textBoxUpdateExePath";
-            this.textBoxUpdateExePath.Size = new System.Drawing.Size(136, 20);
-            this.textBoxUpdateExePath.TabIndex = 16;
+            this.textboxUpdaterVersion.Location = new System.Drawing.Point(506, 311);
+            this.textboxUpdaterVersion.Name = "textboxUpdaterVersion";
+            this.textboxUpdaterVersion.ReadOnly = true;
+            this.textboxUpdaterVersion.Size = new System.Drawing.Size(136, 20);
+            this.textboxUpdaterVersion.TabIndex = 16;
             // 
             // button1
             // 
@@ -182,15 +183,15 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.Controls.Add(this.button1);
-            this.Controls.Add(this.textBoxUpdateExePath);
-            this.Controls.Add(this.textBox4);
+            this.Controls.Add(this.textboxUpdaterVersion);
+            this.Controls.Add(this.textEXEVersion);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.button7);
             this.Controls.Add(this.button6);
             this.Controls.Add(this.button5);
             this.Controls.Add(this.button4);
-            this.Controls.Add(this.textBox3);
+            this.Controls.Add(this.textBoxUpdateExePath);
             this.Controls.Add(this.textBoxExePath);
             this.Controls.Add(this.textBoxPfxPath);
             this.Controls.Add(this.label3);
@@ -210,15 +211,15 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox textBoxPfxPath;
         private System.Windows.Forms.TextBox textBoxExePath;
-        private System.Windows.Forms.TextBox textBox3;
+        private System.Windows.Forms.TextBox textBoxUpdateExePath;
         private System.Windows.Forms.Button button4;
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.Button button6;
         private System.Windows.Forms.Button button7;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox textBox4;
-        private System.Windows.Forms.TextBox textBoxUpdateExePath;
+        private System.Windows.Forms.TextBox textEXEVersion;
+        private System.Windows.Forms.TextBox textboxUpdaterVersion;
         private System.Windows.Forms.Button button1;
     }
 }

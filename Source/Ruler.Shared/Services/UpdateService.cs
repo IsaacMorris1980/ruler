@@ -76,7 +76,7 @@ namespace Ruler.Shared.Services
                     if (!File.Exists(filePath)) throw new Exception($"Missing file: {fileMeta.FileName}");
 
                     // Check SHA256 Hash
-                    if (SecurityService.    (filePath) != fileMeta.Hash)
+                    if (SecurityService.GenerateHash(filePath) != fileMeta.Hash)
                         throw new Exception($"Integrity check failed for {fileMeta.FileName}");
                 }
 
