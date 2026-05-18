@@ -10,5 +10,8 @@ namespace Ruler.Shared.Models
     {
         public string Data { get; set; }      // The JSON list of rulers
         public string Signature { get; set; } // The RSA signature of that JSON
+
     }
 }
+
+

@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Class1.cs" />
+    <Compile Include="Enums\DevicesTypes.cs" />
     <Compile Include="Enums\HitArea.cs" />
     <Compile Include="Enums\InteractionMode.cs" />
     <Compile Include="Enums\MenuItemEnum.cs" />
@@ -61,6 +62,7 @@
     <Compile Include="Models\MenuItemHolder.cs" />
     <Compile Include="Models\MenuItemMetadata.cs" />
     <Compile Include="Models\ModelBase.cs" />
+    <Compile Include="Models\RulerCertMetadata.cs" />
     <Compile Include="Models\RulerGuideline.cs" />
     <Compile Include="Models\RulerInfo.cs" />
     <Compile Include="Models\SignedSettings.cs" />

@@ -4,12 +4,14 @@ using Ruler.Shared.Models;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Ruler.Shared.Services
 {
@@ -41,10 +43,11 @@ namespace Ruler.Shared.Services
                 // 2. Locate the Manifest and Zip in the release assets
                 string manifestUrl = null;
                 string zipUrl = null;
-
+                string manifestSignatureUrl = null;
                 foreach (var asset in release.Assets)
                 {
-                    if (asset.Name == "update.json") manifestUrl = asset.BrowserDownloadUrl;
+                    if (asset.Name == "manifest.json") manifestUrl = asset.BrowserDownloadUrl;
+                    if (asset.Name == "manifest.json.sig") manifestSignatureUrl = asset.BrowserDownloadUrl;
                     if (asset.Name.EndsWith(".zip")) zipUrl = asset.BrowserDownloadUrl;
                 }
 
@@ -52,7 +55,14 @@ namespace Ruler.Shared.Services
 
                 // 3. Download and Verify the Manifest
                 var manifestJson = await _httpClient.GetStringAsync(manifestUrl);
-                var manifest = JsonConvert.DeserializeObject<UpdateManifest>(manifestJson);
+                UpdateManifest manifest = JsonConvert.DeserializeObject<UpdateManifest>(manifestJson);
+               ;
+                string manifestSignature = await _httpClient.GetStringAsync(manifestSignatureUrl);
+
+                if (!SecurityService.VerifyTrust(manifestJson, manifestSignature))
+                {
+                    throw new Exception("The Update Manifest itself is untrusted or has been tampered with!");
+                }
 
                 // 4. Download Zip to Temp folder
                 string tempZip = Path.Combine(Path.GetTempPath(), "RulerUpdate.zip");
@@ -98,10 +108,48 @@ namespace Ruler.Shared.Services
             return JsonConvert.DeserializeObject<GitHubRelease>(response);
         }
 
-        private void LaunchUpdater(string stagingFolder)
+        private void LaunchUpdater(string stagingPath)
         {
-            // This would launch your Ruler.Updater.exe passing the staging path
-            // Then Application.Current.Shutdown();
+            // 1. Locate the physical Updater.exe relative to where Ruler.exe is running
+            string updaterPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Updater.exe");
+
+            if (!File.Exists(updaterPath))
+            {
+                // Fallback: if the updater is missing, we can't update.
+                // You might want to log this or alert the user.
+                return;
+            }
+
+            // 2. Prepare the command line arguments:
+            // Arg 0: The folder where the new files are waiting (Staging)
+            // Arg 1: The folder where the app lives (Destination)
+            // Arg 2: This app's Process ID (so the updater can wait for us to exit)
+            string destinationPath = AppDomain.CurrentDomain.BaseDirectory;
+            int currentPid = Process.GetCurrentProcess().Id;
+
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = updaterPath,
+                Arguments = $"\"{stagingPath}\" \"{destinationPath}\" {currentPid}",
+                UseShellExecute = false,  // Directly start the process
+                CreateNoWindow = true,   // Don't show a console window
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+
+            try
+            {
+                // 3. Launch the updater
+                Process.Start(startInfo);
+
+                // 4. Kill the current application immediately
+                // This releases the locks on Ruler.exe and Ruler.Shared.dll
+                Application.Exit();
+            }
+            catch (Exception ex)
+            {
+                // Log the failure to launch
+                Debug.WriteLine($"Critical Error: Could not start Updater.exe. {ex.Message}");
+            }
         }
     }
 }

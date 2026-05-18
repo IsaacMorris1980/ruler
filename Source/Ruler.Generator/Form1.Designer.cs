@@ -34,7 +34,6 @@
             this.textBoxPfxPath = new System.Windows.Forms.TextBox();
             this.textBoxExePath = new System.Windows.Forms.TextBox();
             this.textBoxUpdateExePath = new System.Windows.Forms.TextBox();
-            this.button4 = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
             this.button6 = new System.Windows.Forms.Button();
             this.button7 = new System.Windows.Forms.Button();
@@ -96,23 +95,15 @@
             this.textBoxUpdateExePath.Size = new System.Drawing.Size(378, 20);
             this.textBoxUpdateExePath.TabIndex = 5;
             // 
-            // button4
-            // 
-            this.button4.Location = new System.Drawing.Point(29, 250);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(239, 23);
-            this.button4.TabIndex = 9;
-            this.button4.Text = "Generate Self Signing Certificate";
-            this.button4.UseVisualStyleBackColor = true;
-            // 
             // button5
             // 
             this.button5.Location = new System.Drawing.Point(29, 279);
             this.button5.Name = "button5";
             this.button5.Size = new System.Drawing.Size(239, 23);
             this.button5.TabIndex = 10;
-            this.button5.Text = "Create RSA Private/Public Certificate";
+            this.button5.Text = "Create Active Certificate";
             this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
             // button6
             // 
@@ -176,6 +167,7 @@
             this.button1.TabIndex = 17;
             this.button1.Text = "Create Master Certificate";
             this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // Form1
             // 
@@ -190,7 +182,6 @@
             this.Controls.Add(this.button7);
             this.Controls.Add(this.button6);
             this.Controls.Add(this.button5);
-            this.Controls.Add(this.button4);
             this.Controls.Add(this.textBoxUpdateExePath);
             this.Controls.Add(this.textBoxExePath);
             this.Controls.Add(this.textBoxPfxPath);
@@ -199,6 +190,7 @@
             this.Controls.Add(this.label1);
             this.Name = "Form1";
             this.Text = "Form1";
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -212,7 +204,6 @@
         private System.Windows.Forms.TextBox textBoxPfxPath;
         private System.Windows.Forms.TextBox textBoxExePath;
         private System.Windows.Forms.TextBox textBoxUpdateExePath;
-        private System.Windows.Forms.Button button4;
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.Button button6;
         private System.Windows.Forms.Button button7;

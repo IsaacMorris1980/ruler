@@ -67,5 +67,19 @@ namespace Ruler.Shared.Services
                 return new List<RulerInfo> { RulerFactory.CreateDefault() };
             }
         }
+        //public static void SaveRegistry(List<RulerCertMetadata> registry)
+        //{
+        //    string json = JsonConvert.SerializeObject(registry);
+        //    Properties.Settings.Default.CertificateRegistryJson = json;
+        //    Properties.Settings.Default.Save();
+        //}
+
+        //public static List<RulerCertMetadata> LoadRegistry()
+        //{
+        //    string json = Properties.Settings.Default.CertificateRegistryJson;
+        //    if (string.IsNullOrEmpty(json)) return new List<RulerCertMetadata>();
+
+        //    return JsonConvert.DeserializeObject<List<RulerCertMetadata>>(json);
+        //}
     }
 }

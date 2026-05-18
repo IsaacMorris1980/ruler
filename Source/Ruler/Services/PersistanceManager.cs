@@ -10,6 +10,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Newtonsoft.Json;
+
 
 namespace Ruler
 {
@@ -95,6 +97,69 @@ namespace Ruler
                 return new List<RulerInfo>(){ RulerFactory.CreateDefault() };
             }
         }
+
+        public static void LoadAndUpgradeConfiguration()
+        {
+            // 1. Ensure our certificate system is ready for action
+            InitializeSecurityFromScratch(); // From Stage 2 (Finds or creates the cert)
+
+            string activeThumb = Properties.Settings.Default.MachineCertThumbprints;
+            bool encryptionReady = SecurityService.IsSecurityReady(activeThumb);
+
+            // 2. Read the raw data payload (e.g., your Ruler list or settings string)
+            string currentPayload = GetRawDataPayload();
+            string currentSignature = GetStoredSignature();
+
+            // SCENARIO A: Brand New Install or Completely Unsigned Legacy Version
+            if (string.IsNullOrEmpty(currentSignature))
+            {
+                Log("Unsigned configuration detected. Assuming legacy version upgrade.");
+
+                if (encryptionReady)
+                {
+                    Log("Active certificate is ready. Upgrading and signing legacy data...");
+
+                    // Re-save the data, which forces the app to sign it this time
+                    SaveAndSignConfiguration(currentPayload, activeThumb);
+
+                    Log("Upgrade complete. Data is now secured with Stage 2 verification.");
+                }
+                else
+                {
+                    // Edge case: No signature AND no valid cert could be made/found
+                    Log("Warning: Legacy data found, but security layer could not be initialized.");
+                    HandleInvalidCertificate();
+                }
+            }
+            // SCENARIO B: The New Way (Data is already signed, so we VERIFY)
+            else
+            {
+                if (encryptionReady && VerifyDataSignature(currentPayload, currentSignature, activeThumb))
+                {
+                    Log("Configuration verification successful. Signature is valid.");
+                    ProcessValidData(currentPayload);
+                }
+                else
+                {
+                    Log("CRITICAL: Configuration signature verification failed! Data may be tampered with.");
+                    HandleSecurityBreach();
+                }
+            }
+        }
+        //public static void SaveRegistry(List<RulerCertMetadata> registry)
+        //{
+        //    string json = JsonConvert.SerializeObject(registry);
+        //    Properties.Settings.Default.CertificateRegistryJson = json;
+        //    Properties.Settings.Default.Save();
+        //}
+
+        //public static List<RulerCertMetadata> LoadRegistry()
+        //{
+        //    string json = Properties.Settings.Default.CertificateRegistryJson;
+        //    if (string.IsNullOrEmpty(json)) return new List<RulerCertMetadata>();
+
+        //    return JsonConvert.DeserializeObject<List<RulerCertMetadata>>(json);
+        //}
     }
     
 }

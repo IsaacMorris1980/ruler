@@ -65,8 +65,8 @@ namespace Ruler
         }
         public static void CloseAll()
         {
-            var a = OpenForms.ToArray();    
-            foreach (var form in a)
+            var allForms = OpenForms.ToArray();    
+            foreach (var form in allForms)
             {
                 form.Close();
             }
