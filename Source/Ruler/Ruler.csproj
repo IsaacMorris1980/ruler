@@ -185,9 +185,21 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ruler.Contracts\Ruler.Contracts.csproj">
+      <Project>{c7ae369b-1778-449c-a20b-ce2f966f9662}</Project>
+      <Name>Ruler.Contracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ruler.Legacy\Ruler.Legacy.csproj">
+      <Project>{b4545191-dae5-4cc6-a4a0-a6d146313789}</Project>
+      <Name>Ruler.Legacy</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ruler.Shared\Ruler.Shared.csproj">
       <Project>{b66439ff-bc75-469f-99fa-70ac0bac4e7a}</Project>
       <Name>Ruler.Shared</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ruler.UI\Ruler.UI.csproj">
+      <Project>{abb8ef57-b9f2-4f78-9ed8-d7a4328600f4}</Project>
+      <Name>Ruler.UI</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

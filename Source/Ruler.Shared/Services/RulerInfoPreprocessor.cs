@@ -1,7 +1,7 @@
-﻿using Ruler.Shared.Enums;
+﻿
 using Ruler.Shared.Factories;
 using Ruler.Shared.Models;
-
+using Ruler.Contracts.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;

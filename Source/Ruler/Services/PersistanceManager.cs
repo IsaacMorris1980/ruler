@@ -40,7 +40,7 @@ namespace Ruler
                 IEnumerable<RulerInfo> processedData = _preprocessor.Preprocess(saverulers);
 
                 // 3. Serialize to JSON using your Library's SettingsService (Newtonsoft)
-                string json = SettingsService.SerializeRulers(processedData);
+                string json = SerializationService.SerializeRulers(processedData);
                 // 4. Save to the actual exe.config
               Properties.Settings.Default.RulerCollection = json;
               Properties.Settings.Default.Save();
@@ -65,7 +65,7 @@ namespace Ruler
 
                 // 2. Deserialize using the Library Service
                 // Note: DeserializeRulers should return a default ruler if the string is empty
-                currentrulers = SettingsService.DeserializeRulers(json);
+                currentrulers = SerializationService.DeserializeRulers(json);
 
                 // 3. If no saved rulers exist, create one default ruler to start with
                 if (currentrulers == null || !currentrulers.Any())

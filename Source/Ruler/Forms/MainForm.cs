@@ -1,23 +1,12 @@
-﻿using Ruler.Properties;
-using Ruler.Shared.Enums;
+﻿using Ruler.Shared.Enums;
 using Ruler.Shared.Factories;
-using Ruler.Shared.Interfaces;
+using Ruler.Contracts.Enums;
 using Ruler.Shared.Models;
-using Ruler.Shared.Services;
 
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Windows.Forms.VisualStyles;
 
 
 namespace Ruler.Forms

@@ -1,16 +1,17 @@
 ﻿using System;
-using System.Drawing;
+using System.Windows;
 using System.Runtime.CompilerServices;
-using System.Windows.Forms;
+
 
 using Newtonsoft.Json;
 
-using Ruler.Shared.Enums;
-using Ruler.Shared.Interfaces;
+using Ruler.Contracts.Models;
+using Ruler.Contracts.Enums;
+
 
 namespace Ruler.Shared.Models
 {
-    public class RulerInfo : ModelBase
+    public class RulerInfo : ModelBase,IRulerInfo
     {
         [JsonProperty("Width")]
         public int Width
@@ -85,19 +86,11 @@ namespace Ruler.Shared.Models
             get;
             set;
         }
-        [JsonIgnore]
-        public Point DisplayLocation
-        {
-            get
-            {
-                return new Point(Left, Top);
-            }
-        }
         // The property the Serializer uses
         [JsonProperty("DisplayLocation")]
         public string DisplayLocationString
         {
-            get => $"{DisplayLocation.X},{DisplayLocation.Y}"; 
+            get => $"{Left},{Top}"; 
             set
             {
                 var parts = value.Split(',');
@@ -111,10 +104,6 @@ namespace Ruler.Shared.Models
             }
         }
         [JsonIgnore]
-       public Orientation RulerOrientation
-        {
-            get => IsVertical ? Orientation.Vertical : Orientation.Horizontal;
-        }
       public RulerGuideline Guideline
         {
             get;
@@ -125,10 +114,12 @@ namespace Ruler.Shared.Models
             get;
             set;
         }
+        public double GuidelineLocation { get; set; }
+
         public override string ToString()
         {
             return $"[RulerInfo Details]" + Environment.NewLine +
-                   $"  Orientation: {RulerOrientation} (IsVertical: {IsVertical})" + Environment.NewLine +
+                   $"  IsVertical: {IsVertical}" + Environment.NewLine +
                    $"  Size: {Width}x{Height}" + Environment.NewLine +
                    $"  Location: {Left},{Top} (Display: {DisplayLocationString})" + Environment.NewLine +
                    $"  Opacity: {Opacity}" + Environment.NewLine +
