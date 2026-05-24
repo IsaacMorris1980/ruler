@@ -51,33 +51,18 @@
     <Compile Include="Common\NativeEnums.cs" />
     <Compile Include="Common\NativeMethods.cs" />
     <Compile Include="Common\NativeStructures.cs" />
-    <Compile Include="Enums\MeasurementUnit.cs" />
     <Compile Include="Enums\MonitorDpiType.cs" />
     <Compile Include="Enums\ResizeEdge.cs" />
-    <Compile Include="Enums\SaveTypes.cs" />
-    <Compile Include="Enums\ScaleMode.cs" />
     <Compile Include="Enums\TickScaleMode.cs" />
+    <Compile Include="Enums\TickType.cs" />
     <Compile Include="Hardware\MonitorManager.cs" />
     <Compile Include="Hardware\MonitorProfileManager.cs" />
-    <Compile Include="Interfaces\IDataPreprocessor.cs" />
-    <Compile Include="Interfaces\IDialogService.cs" />
-    <Compile Include="Interfaces\IEnvironmentService.cs" />
-    <Compile Include="Interfaces\IHardwareMonitorService.cs" />
-    <Compile Include="Interfaces\ILoggingService.cs" />
-    <Compile Include="Interfaces\IMonitorProfileManager.cs" />
-    <Compile Include="Interfaces\IOptionService.cs" />
-    <Compile Include="Interfaces\IRulerDataService.cs" />
-    <Compile Include="Interfaces\IRulerInfo.cs" />
-    <Compile Include="Interfaces\ISavingService.cs" />
     <Compile Include="Interfaces\IUnitStrategy.cs" />
-    <Compile Include="Interfaces\IUpdateService.cs" />
-    <Compile Include="Interfaces\IWindowPlacementService.cs" />
     <Compile Include="Math\RulerMath.cs" />
     <Compile Include="Models\GitHubAsset.cs" />
     <Compile Include="Models\GitHubRelease.cs" />
     <Compile Include="Models\Guideline.cs" />
     <Compile Include="Models\ModelBase.cs" />
-    <Compile Include="Models\MonitorProfile.cs" />
     <Compile Include="Models\OptionsBase.cs" />
     <Compile Include="Models\RulerInfo.cs" />
     <Compile Include="Models\RulerMagnifier.cs" />
@@ -86,12 +71,16 @@
     <Compile Include="Models\UpdateVersion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Hardware\HardwareMonitorService.cs" />
+    <Compile Include="Services\EnvironmentService.cs" />
     <Compile Include="Services\LoggingService.cs" />
     <Compile Include="Services\OptionService.cs" />
     <Compile Include="Services\RulerDataService.cs" />
     <Compile Include="Services\RulerFactory.cs" />
     <Compile Include="Services\RulerInfoPreprocessor.cs" />
-    <Compile Include="Services\UpdateService.cs" />
+    <Compile Include="Services\Security\LocalValidationService.cs" />
+    <Compile Include="Services\Security\ReleaseValidationService.cs" />
+    <Compile Include="Services\Update\UpdateService.cs" />
+    <Compile Include="Services\WindowPlacementService.cs" />
     <Compile Include="Strategies\UnitStrategyFactory.cs" />
     <Compile Include="Strategies\Units\CentimeterUnitStrategy.cs" />
     <Compile Include="Strategies\Units\InchUnitStrategy.cs" />
@@ -103,6 +92,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ruler.Contracts\Ruler.Contracts.csproj">
+      <Project>{604d8c85-e5bc-47d7-9347-74ea36621d10}</Project>
+      <Name>Ruler.Contracts</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

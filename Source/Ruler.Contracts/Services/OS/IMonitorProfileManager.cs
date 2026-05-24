@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace Ruler.Shared
+using Ruler.Contracts.Models;
+
+namespace Ruler.Contracts.Services.OS
 {
     public interface IMonitorProfileManager
     {

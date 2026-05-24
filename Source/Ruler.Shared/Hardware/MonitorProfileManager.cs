@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Ruler.Contracts.Services.Persistance;
+using Ruler.Contracts.Services.OS;
+
+using Ruler.Contracts.Models;
 namespace Ruler.Shared
 {
     public class MonitorProfileManager : IMonitorProfileManager
@@ -19,7 +23,7 @@ namespace Ruler.Shared
         public void Initialize()
         {
             // 1. Load existing profiles from disk
-            var savedProfiles = _persistence.Load<MonitorProfile>() ?? new List<MonitorProfile>();
+            var savedProfiles = _persistence.LoadMonitorProfiles() ?? new List<MonitorProfile>();
             // 2. Get currently connected hardware
             var activeHardware = _hardware.GetActiveHardwareProfiles();
             // 3. Mark all saved profiles as inactive by default
@@ -77,6 +81,6 @@ namespace Ruler.Shared
                 _profiles.Add(profile);
             }
         }
-        public void Save() => _persistence.Save(_profiles);
+        public void Save() => _persistence.SaveMonitorProfiles(_profiles);
     }
 }

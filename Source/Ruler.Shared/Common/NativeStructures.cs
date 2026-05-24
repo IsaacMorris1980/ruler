@@ -5,12 +5,6 @@ namespace Ruler.Shared
     public static class NativeStructures
     {
         [StructLayout(LayoutKind.Sequential)]
-        public struct POINT
-        {
-            public int x;
-            public int y;
-        }
-        [StructLayout(LayoutKind.Sequential)]
         public struct WINDOWPOS
         {
             public IntPtr hwnd;
@@ -20,22 +14,6 @@ namespace Ruler.Shared
             public int cx;
             public int cy;
             public uint flags;
-        }
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-            public int Width => Right - Left;
-            public int Height => Bottom - Top;
-        }
-        public struct MonitorPositionData
-        {
-            public string DeviceId;
-            public double RelativeX;
-            public double RelativeY;
         }
         public class MonitorInfo
         {
@@ -48,8 +26,8 @@ namespace Ruler.Shared
         public struct MONITORINFOEX
         {
             public int Size;
-            public RECT Monitor;
-            public RECT WorkArea;
+            public Ruler.Contracts.Interop.NativeStructures.RECT Monitor;
+            public Ruler.Contracts.Interop.NativeStructures.RECT WorkArea;
             public uint Flags;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
             public string DeviceName;

@@ -1,4 +1,4 @@
-﻿namespace Ruler.Shared
+﻿namespace Ruler.Contracts.Enums
 {
     public enum ScaleMode
     {

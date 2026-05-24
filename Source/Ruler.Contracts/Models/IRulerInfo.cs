@@ -1,6 +1,8 @@
 ﻿using System;
+using Ruler.Contracts.Enums;
+using Ruler.Contracts.Models;
 
-namespace Ruler.Shared
+namespace Ruler.Contracts.Models
 {
     public interface IRulerInfo
     {

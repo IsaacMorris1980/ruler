@@ -523,7 +523,7 @@ namespace Ruler.Wpf
             MagnifierScale = 2.0;
             UpdateMagnifierScaleSelection();  
         }
-        internal void SetInitialState(RulerInfo initialInfo)
+        public void SetInitialState(IRulerInfo initialInfo)
         {
             if (initialInfo == null)
             {

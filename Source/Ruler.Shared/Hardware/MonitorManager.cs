@@ -4,6 +4,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using static Ruler.Shared.NativeMethods;
 using static Ruler.Shared.NativeStructures;
+using Ruler.Contracts.Models;
+using Ruler.Contracts.Services.Persistance;
+using static Ruler.Contracts.Interop.NativeStructures;
 namespace Ruler.Shared
 {
     public class MonitorManager
@@ -18,11 +21,11 @@ namespace Ruler.Shared
         }
         public void LoadMonitorProfiles()
         {
-            _monitorProfiles = _persistenceStrategy.Load<MonitorProfile>();
+            _monitorProfiles = _persistenceStrategy.LoadMonitorProfiles();
         }
         public void SaveMonitorProfiles()
         {
-            _persistenceStrategy.Save<MonitorProfile>(_monitorProfiles);
+            _persistenceStrategy.SaveMonitorProfiles(_monitorProfiles);
         }
         public MonitorProfile GetMonitorForRuler(string deviceName)
         {
@@ -34,7 +37,7 @@ namespace Ruler.Shared
         }
         public List<MonitorProfile> GetActiveMonitors()
         {
-            var profiles = new List<MonitorProfile>();
+            List<MonitorProfile> profiles = new List<MonitorProfile>();
             // Instead of System.Windows.Forms.Screen, we use EnumDisplayMonitors 
             // to remain framework-agnostic.
             MonitorEnumProc callback = (IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData) =>

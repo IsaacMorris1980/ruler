@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Shared", "Ruler.Share
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.UI.Shared", "Ruler.UI.Shared\Ruler.UI.Shared.csproj", "{F2B6C30D-BB54-45D9-8355-CED5A403FA03}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Contracts", "Ruler.Contracts\Ruler.Contracts.csproj", "{604D8C85-E5BC-47D7-9347-74EA36621D10}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{F2B6C30D-BB54-45D9-8355-CED5A403FA03}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2B6C30D-BB54-45D9-8355-CED5A403FA03}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2B6C30D-BB54-45D9-8355-CED5A403FA03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{604D8C85-E5BC-47D7-9347-74EA36621D10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{604D8C85-E5BC-47D7-9347-74EA36621D10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{604D8C85-E5BC-47D7-9347-74EA36621D10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{604D8C85-E5BC-47D7-9347-74EA36621D10}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

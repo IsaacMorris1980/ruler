@@ -1,6 +1,8 @@
 ﻿using System;
+using Ruler.Contracts.Models;
+using Ruler.Contracts.Enums;
 
-namespace Ruler.Shared
+namespace Ruler.Shared.Models
 {
     public class RulerInfo:ModelBase, IRulerInfo
     {

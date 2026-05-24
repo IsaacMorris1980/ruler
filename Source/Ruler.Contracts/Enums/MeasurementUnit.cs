@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace Ruler.Shared
+namespace Ruler.Contracts.Enums
 {
     public enum MeasurementUnit
     {

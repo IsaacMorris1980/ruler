@@ -1,8 +1,9 @@
 ﻿using Newtonsoft.Json;
 
-using Ruler.Wpf.Models;
-using Ruler.Wpf.Properties;
-using Ruler.Wpf.Services.Persistence.Strategy;
+using Ruler.Contracts.Models;
+using Ruler.Contracts.Services.Persistance;
+using Ruler.Shared;
+
 
 using System;
 using System.Collections.Generic;
@@ -15,55 +16,83 @@ namespace Ruler.Wpf.Services
     // 4. The Refactored Saving Service using DI
     public class SavingService : ISavingService
     {
-        private readonly IServiceProvider _serviceProvider;
-
-        private readonly IDataPreprocessor<RulerInfo> _rulerPreprocessor;
-        private readonly ILoggingService<SavingService> _logger;
-
-        private readonly Dictionary<Type, string> _settingsMap = new()
-    {
-        { typeof(RulerInfo), "RulerSettingsJson" },
-        { typeof(MonitorProfile), "MonitorProfilesJson" }
-    };
-
-        // We inject IServiceProvider to resolve processors dynamically
-        public SavingService(ILoggingService<SavingService> logger,IDataPreprocessor<RulerInfo> dataPreprocessor)
+        // Settings configuration optimized for runtime interface resolution
+        private readonly JsonSerializerSettings _jsonSettings = new JsonSerializerSettings
         {
-            _rulerPreprocessor = dataPreprocessor;
-            _logger = logger;
+            TypeNameHandling = TypeNameHandling.Auto,
+            Formatting = Formatting.Indented
+        };
+
+        #region Ruler Info Persistence
+        public void Save(List<IRulerInfo> items)
+        {
+            string json = JsonConvert.SerializeObject(items, _jsonSettings);
+            Properties.Settings.Default.RulerCollectionJson = json;
+            Properties.Settings.Default.Save();
         }
 
-        public void Save<T>(List<T> items)
+        public List<IRulerInfo> Load()
         {
-            if (items == null || !items.Any()) return;
-
-            IEnumerable<T> dataToSave = items;
-
-            // DI MAGIC: Try to find a preprocessor for this specific type T
-            if (typeof(T) == typeof(RulerInfo))
+            string json = Properties.Settings.Default.RulerCollectionJson;
+            if (string.IsNullOrEmpty(json) || json == "{}")
             {
-                _logger.LogInfo("Preprocessing RulerInfo data before saving.");
-                dataToSave = (IEnumerable<T>)_rulerPreprocessor.Preprocess(items.Cast<RulerInfo>());
+                var a = RulerFactory.CreateDefault();
+                return new List<IRulerInfo>(){ a };
             }
 
-            if (_settingsMap.TryGetValue(typeof(T), out string key))
+            try
             {
-                string json = JsonConvert.SerializeObject(dataToSave);
-                Settings.Default[key] = json;
-                Settings.Default.Save();
+                return JsonConvert.DeserializeObject<List<IRulerInfo>>(json, _jsonSettings)
+                       ?? new List<IRulerInfo>();
+            }
+            catch
+            {
+                return new List<IRulerInfo>();
+            }
+        }
+        #endregion
+
+        #region Monitor Profiles Persistence
+        /// <summary>
+        /// Serializes and stores the complete collection of monitor profiles into application settings.
+        /// </summary>
+        public void SaveMonitorProfiles(List<MonitorProfile> profiles)
+        {
+            try
+            {
+                // Concrete list serialization safely bypasses explicit TypeNameHandling requirements
+                string json = JsonConvert.SerializeObject(profiles, Formatting.Indented);
+                Properties.Settings.Default.MonitorCollectionJson = json;
+                Properties.Settings.Default.Save();
+            }
+            catch (Exception ex)
+            {
+                // Fallback exception handling block (or route out to your ILoggingService)
+                System.Diagnostics.Debug.WriteLine("Error saving monitor profiles data: " + ex.Message);
             }
         }
 
-        public List<T> Load<T>()
+        /// <summary>
+        /// Restores saved hardware profile records from system settings.
+        /// </summary>
+        public List<MonitorProfile> LoadMonitorProfiles()
         {
-            if (_settingsMap.TryGetValue(typeof(T), out string key))
+            string json = Properties.Settings.Default.MonitorCollectionJson;
+            if (string.IsNullOrEmpty(json) || json == "[]" || json == "{}")
             {
-                var json = Settings.Default[key]?.ToString();
-                if (string.IsNullOrEmpty(json)) return new List<T>();
-
-                return JsonConvert.DeserializeObject<List<T>>(json) ?? new List<T>();
+                return new List<MonitorProfile>();
             }
-            return new List<T>();
+
+            try
+            {
+                return JsonConvert.DeserializeObject<List<MonitorProfile>>(json)
+                       ?? new List<MonitorProfile>();
+            }
+            catch
+            {
+                return new List<MonitorProfile>();
+            }
         }
+        #endregion
     }
 }

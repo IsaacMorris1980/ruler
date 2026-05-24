@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace Ruler.Shared
+namespace Ruler.Contracts.Models
 {
     public enum SaveTypes
     {

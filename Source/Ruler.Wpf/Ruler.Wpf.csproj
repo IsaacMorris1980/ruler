@@ -159,7 +159,6 @@
     <Compile Include="Converters\BooleanToResizeModeConverter.cs" />
     <Compile Include="Services\AppManager.cs" />
     <Compile Include="Services\DialogService.cs" />
-    <Compile Include="Services\EnvironmentService.cs" />
     <Compile Include="Services\IDialogService.cs" />
     <Compile Include="Common\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -168,10 +167,7 @@
     </Compile>
     <Compile Include="Common\TickType.cs" />
     <Compile Include="Converters\ValueToBooleanConverter.cs" />
-    <Compile Include="Services\IEnvironmentService.cs" />
-    <Compile Include="Services\IWindowPlacementService.cs" />
     <Compile Include="Services\SavingService.cs" />
-    <Compile Include="Services\WindowPlacementService.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -245,9 +241,17 @@
     <Resource Include="app.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ruler.Contracts\Ruler.Contracts.csproj">
+      <Project>{604d8c85-e5bc-47d7-9347-74ea36621d10}</Project>
+      <Name>Ruler.Contracts</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ruler.Shared\Ruler.Shared.csproj">
       <Project>{EBF29A7A-9FEF-4C14-AB71-52F5C074FCA0}</Project>
       <Name>Ruler.Shared</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ruler.UI.Shared\Ruler.UI.Shared.csproj">
+      <Project>{f2b6c30d-bb54-45d9-8355-ced5a403fa03}</Project>
+      <Name>Ruler.UI.Shared</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
