@@ -1,0 +1,56 @@
+﻿<Window x:Class="Ruler.Wpf.Views.RulerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2000/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2000/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:enums="clr-namespace:Ruler.Shared.Enums;assembly=Ruler.Shared"
+        mc:Ignorable="d"
+        Title="Ruler" 
+        Height="{Binding Height, Mode=TwoWay}" 
+        Width="{Binding Width, Mode=TwoWay}"
+        WindowStyle="None" 
+        AllowsTransparency="True" 
+        Background="#FFF0F0F0"
+        Topmost="{Binding TopMost}"
+        Opacity="{Binding Opacity}"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+
+    <Window.Resources>
+    </Window.Resources>
+
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="Stay On Top" IsCheckable="True" IsChecked="{Binding TopMost}" Command="{Binding ToggleTopMostCommand}"/>
+            <MenuItem Header="Lock Resizing" IsCheckable="True" IsChecked="{Binding IsLocked}" Command="{Binding ToggleLockCommand}"/>
+            <MenuItem Header="Is Vertical?" IsCheckable="True" IsChecked="{Binding IsVertical}" Command="{Binding ToggleOrientationCommand}"/>
+            <MenuItem Header="Show Tooltip" IsCheckable="True" IsChecked="{Binding ShowToolTip}" Command="{Binding ToggleTooltipCommand}"/>
+            <Separator/>
+            <MenuItem Header="Opacity" ItemsSource="{Binding OpacityLevels}">
+                <MenuItem.ItemContainerStyle>
+                    <Style TargetType="MenuItem">
+                        <Setter Property="Header" Value="{Binding}"/>
+                        <Setter Property="IsCheckable" Value="True"/>
+                        <Setter Property="IsChecked" Value="{Binding Path=DataContext.Opacity, RelativeSource={RelativeSource AncestorType=ContextMenu}, Converter={StaticResource OpacityMatchConverter}, Mode=OneWay}"/>
+                    </Style>
+                </MenuItem.ItemContainerStyle>
+            </MenuItem>
+            <MenuItem Header="Save Type?" ItemsSource="{Binding SaveTypeOptions}">
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Set Size" Command="{Binding SetSizeCommand}"/>
+            <MenuItem Header="Duplicate" Command="{Binding DuplicateCommand}"/>
+            <MenuItem Header="Show Guideline" IsCheckable="True" IsChecked="{Binding IsGuidelineEnabled}" Command="{Binding ToggleGuidelineCommand}"/>
+            <MenuItem Header="Reset">
+                <MenuItem Header="Reset To Default" Command="{Binding ResetDefaultCommand}"/>
+                <MenuItem Header="Reset All Saved Rulers to Default" Command="{Binding ClearAllSavedCommand}"/>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="Close" Command="{Binding CloseCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"/>
+            <MenuItem Header="Exit" Command="{Binding ExitCommand}"/>
+        </ContextMenu>
+    </Window.ContextMenu>
+
+    <Grid BorderBrush="Black" BorderThickness="1">
+        <TextBlock Text="WPF Ruler Frame" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#AA000000" FontSize="11"/>
+    </Grid>
+</Window>

@@ -1,11 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-using Ruler.Wpf.Common;
-using Ruler.Wpf.Models;
-using Ruler.Wpf.Services;
-using Ruler.Wpf.Services.Persistence;
-using Ruler.Wpf.Services.Persistence.Strategy;
+﻿using Ruler.Shared.Factories;
+using Ruler.Shared.Models;
+using Ruler.Shared.Services;
+using Ruler.Wpf.Infrastructure;
+using Ruler.Wpf.Properties;
 using Ruler.Wpf.ViewModels;
+using Ruler.Wpf.Views;
 
 using System;
 using System.Collections.Generic;
@@ -22,54 +21,53 @@ namespace Ruler.Wpf
     /// </summary>
     public partial class App : Application
     {
-        // In App.xaml.cs
-        public IServiceProvider ServiceProvider { get; private set; }
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            var log = new LoggingService();
-            var settingsStraegy = new SettingsPersistenceStrategy(log);
-            RulerInfo initialInfo;
-            
-            if (e.Args.Length>0)
+
+            // 1. Pull the raw JSON string out of the WPF application settings configuration object
+            string json = Ruler.Wpf.Properties.Settings.Default.RulerCollection;
+
+            // 2. Deserialize into core data models using your shared service
+            List<RulerInfo> loadedRulers = SettingsService.DeserializeRulers(json);
+
+            if (loadedRulers == null || !System.Linq.Enumerable.Any(loadedRulers))
             {
-                initialInfo = CommandLineRulerFactory.CovertToRulerInfo(e.Args);
+                loadedRulers = new List<RulerInfo>{ RulerFactory.CreateDefault() };
             }
-            else
+
+            // 3. Populate the central tracking state bucket
+            RulerSessionManager.Initialize(loadedRulers);
+
+            // 4. Instantiate UI views for the models
+            foreach (var model in loadedRulers)
             {
-                initialInfo = settingsStraegy.Load();
+                OpenNewRulerWindow(model);
             }
-
-
-
-            ServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton(initialInfo);
-            ConfigureServices(serviceCollection);
-           ServiceProvider = serviceCollection.BuildServiceProvider();
-
-           
-            ExecuteStartupLogic();
         }
-        private void ConfigureServices(IServiceCollection services)
+
+        public static void OpenNewRulerWindow(RulerInfo model)
         {
-            
-            services.AddSingleton<ILoggingService, LoggingService>();
-            services.AddSingleton<SettingsPersistenceStrategy>();
-            services.AddSingleton<SingleRulerPersistenceService>();
-            services.AddSingleton<IDialogService, DialogService>();           
-            services.AddTransient<RulerViewModel>();
-            services.AddTransient<MainWindow>();
-        }
-        private void ExecuteStartupLogic()
-        {
-            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
-            var dialogService = ServiceProvider.GetRequiredService<IDialogService>();
-            var persistenceService = ServiceProvider.GetRequiredService<SingleRulerPersistenceService>();
-            RulerInfo initialInfo = persistenceService.LoadRulerState();
-            dialogService.AddRuler(mainWindow);            
-            mainWindow.Show();
+            // Register model to track it if spawned during runtime (e.g. Duplication)
+            RulerSessionManager.RegisterNewRuler(model);
+
+            var viewModel = new ViewModels.RulerViewModel(model);
+            var view = new RulerWindow { DataContext = viewModel };
+            view.Show();
         }
 
+        public static void OpenRulerInstance(RulerInfo model)
+        {
+            var viewModel = new RulerViewModel(model);
+            var view = new RulerWindow { DataContext = viewModel };
+            view.Show();
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            // Final verification pipeline cleanup before application memory is released
+            RulerSessionManager.PersistToSettings();
+            base.OnExit(e);
+        }
     }
 }
-
