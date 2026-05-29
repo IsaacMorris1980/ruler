@@ -1,5 +1,6 @@
 ﻿using System;
-namespace Ruler.Shared
+
+namespace Ruler.Contracts.Services.OS
 {
     public interface IEnvironmentService
     {

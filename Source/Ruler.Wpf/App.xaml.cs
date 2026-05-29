@@ -39,7 +39,7 @@ namespace Ruler.Wpf
             serviceCollection.AddSingleton<IEnvironmentService, EnvironmentService>();
             serviceCollection.AddSingleton(typeof(ILoggingService<>),typeof(DebugLoggingService<>));
             serviceCollection.AddSingleton<IPersistenceStrategy, SavingService>();
-            serviceCollection.AddSingleton<IDialogService, DialogService>();
+            serviceCollection.AddSingleton<IDialogService, WpfDialogService>();
             serviceCollection.AddSingleton<SavingService>();
             serviceCollection.AddSingleton<AppManager>();
             serviceCollection.AddSingleton<MonitorManager>();

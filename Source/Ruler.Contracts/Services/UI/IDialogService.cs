@@ -1,4 +1,7 @@
-﻿namespace Ruler.Shared
+﻿using Ruler.Contracts.Models;
+using Ruler.Contracts.Strategies;
+
+namespace Ruler.Contracts.Services.UI
 {
     /// <summary>
     /// Defines a contract for services that show dialogs.
@@ -7,7 +10,8 @@
     /// </summary>
     public interface IDialogService
     {
-        Size ShowSetSizeDialog(double width, double height);
+        DialogSizeResult ShowSetSizeDialog(double width, double height, IUnitStrategy strategy);
         void ShowAboutDialog(string message);
+        CalibrationResult? ShowCalibrationDialog(double defaultSliderValue);
     }
 }

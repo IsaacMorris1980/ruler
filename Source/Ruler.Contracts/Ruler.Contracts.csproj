@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -41,12 +44,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
     <Compile Include="Enums\MeasurementUnit.cs" />
     <Compile Include="Enums\ScaleMode.cs" />
+    <Compile Include="Extensions\EnumExtensions.cs" />
     <Compile Include="Interop\NativeStructures.cs" />
+    <Compile Include="Models\CalibrationResult.cs" />
+    <Compile Include="Models\DialogSizeResult.cs" />
+    <Compile Include="Models\DTO\FileEntry.cs" />
+    <Compile Include="Models\DTO\GitHubAsset.cs" />
+    <Compile Include="Models\DTO\GitHubRelease.cs" />
+    <Compile Include="Models\DTO\UpdateManifest.cs" />
     <Compile Include="Models\IRulerInfo.cs" />
+    <Compile Include="Models\ModelBase.cs" />
     <Compile Include="Models\MonitorProfile.cs" />
+    <Compile Include="Models\OptionsBase.cs" />
     <Compile Include="Models\SaveTypes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Services\Infrastructure\ILoggingService.cs" />
@@ -55,14 +66,17 @@
     <Compile Include="Services\OS\IMonitorProfileManager.cs" />
     <Compile Include="Services\OS\IWindowPlacementService.cs" />
     <Compile Include="Services\Persistance\IDataPreprocessor.cs" />
-    <Compile Include="Services\Persistance\IRulerDataService.cs" />
     <Compile Include="Services\Persistance\ISavingService.cs" />
     <Compile Include="Services\Security\ILocalValidationService.cs" />
     <Compile Include="Services\Security\IReleaseValidationService.cs" />
     <Compile Include="Services\UI\IDialogService.cs" />
     <Compile Include="Services\UI\IOptionService.cs" />
+    <Compile Include="Services\UI\IRulerWindowManager.cs" />
     <Compile Include="Services\Updates\IUpdateService.cs" />
+    <Compile Include="Strategies\IUnitStrategy.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

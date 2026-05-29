@@ -1,9 +1,12 @@
-﻿namespace Ruler.Shared
+﻿using Ruler.Contracts.Enums;
+using Ruler.Contracts.Extensions;
+
+namespace Ruler.Contracts.Models
 {
     public abstract class OptionBase : ModelBase
     {
-        private bool _isSelected=false;
-        private bool _isEnabled=true;
+        private bool _isSelected = false;
+        private bool _isEnabled = true;
         public double Value { get; set; }
         public string Label { get; set; }
         public bool IsSelected
@@ -15,7 +18,7 @@
                 SetProperty(ref _isSelected, value);
             }
         }
-        public bool IsEnabled { get=> _isEnabled; set=> SetProperty(ref _isEnabled,value); }
+        public bool IsEnabled { get => _isEnabled; set => SetProperty(ref _isEnabled, value); }
     }
     public class ScaleOption : OptionBase
     {
@@ -23,8 +26,8 @@
         public ScaleOption(double scale)
         {
             Value = scale;
-            Label =scale==0?"Auto":$"{scale * 100}%";
-            IsAuto = scale==0?true:false;
+            Label = scale == 0 ? "Auto" : $"{scale * 100}%";
+            IsAuto = scale == 0 ? true : false;
         }
     }
     public class OpacityOption : OptionBase
@@ -53,7 +56,7 @@
 
         public SaveOption(SaveTypes type)
         {
-                    SaveType = type;
+            SaveType = type;
             Label = type.GetDescription();
         }
     }

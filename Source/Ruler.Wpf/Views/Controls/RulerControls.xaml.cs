@@ -1,6 +1,4 @@
-﻿using Ruler.Wpf.Enums;
-using Ruler.Wpf.Services.Persistence.Strategy;
-using Ruler.Wpf.Services.Persistence.Strategy.Units;
+﻿using Ruler.Contracts.Strategies;
 
 using System;
 using System.Windows;
@@ -8,8 +6,9 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Ruler.Contracts.Enums;
 
-namespace Ruler.UI.Shared
+namespace Ruler.Wpf.Views.Dialogs
 {
     /// <summary>
     /// A high-performance ruler control that uses a Strategy pattern to handle 

@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Ruler.Shared
+namespace Ruler.Contracts.Models.DTO
 {
     public class GitHubAsset
     {

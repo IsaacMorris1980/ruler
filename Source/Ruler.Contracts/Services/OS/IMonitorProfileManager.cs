@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-
 using Ruler.Contracts.Models;
 
 namespace Ruler.Contracts.Services.OS

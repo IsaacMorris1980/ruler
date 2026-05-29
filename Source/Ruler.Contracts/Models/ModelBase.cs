@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ruler.Shared
+namespace Ruler.Contracts.Models
 {
     public class ModelBase : INotifyPropertyChanged
     {

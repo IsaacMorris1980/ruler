@@ -1,7 +1,7 @@
 ﻿using Ruler.Contracts.Models;
-
 using System;
 using System.Collections.Generic;
+
 namespace Ruler.Contracts.Services.OS
 {
     public interface IHardwareMonitorService

@@ -1,0 +1,52 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Style x:Key="OptionItemStyle" TargetType="MenuItem">
+        <Setter Property="Header" Value="{Binding Label}"/>
+        <Setter Property="IsCheckable" Value="True"/>
+        <Setter Property="IsChecked" Value="{Binding IsSelected, Mode=TwoWay}"/>
+        <Setter Property="Command" Value="{Binding Path=PlacementTarget.DataContext.SetOptionCommand, 
+                RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        <Setter Property="CommandParameter" Value="{Binding}"/>
+    </Style>
+
+    <ContextMenu x:Key="MainRulerMenu">
+        <MenuItem Header="Always on Top" IsCheckable="True" 
+                  IsChecked="{Binding PlacementTarget.DataContext.TopMost, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+        <MenuItem Header="Lock Ruler" IsCheckable="True" 
+                  IsChecked="{Binding PlacementTarget.DataContext.IsLocked, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        <MenuItem Header="Show Magifier" IsCheckable="True" 
+                  IsChecked="{Binding PlacementTarget.DataContext.ShowMagifier, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+            <Separator/>
+
+        <MenuItem Header="Units" 
+                  ItemsSource="{Binding PlacementTarget.DataContext.UnitsOptions, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+                  ItemContainerStyle="{StaticResource OptionItemStyle}"/>
+
+        <MenuItem Header="Opacity" 
+                  ItemsSource="{Binding PlacementTarget.DataContext.OpacityOptions, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+                  ItemContainerStyle="{StaticResource OptionItemStyle}"/>
+        <MenuItem Header="Manual Scale"
+                  ItemsSource="{Binding PlacementTarget.DataContext.ScaleOptions, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                    ItemContainerStyle="{StaticResource OptionItemStyle}"/>
+        <MenuItem Header="Magifier Scale"
+                  ItemsSource="{Binding PlacementTarget.DataContext.MagifierScaleOptions, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                   ItemContainerStyle="{StaticResource OptionItemStyle}"/>
+
+        <Separator/>
+
+        <MenuItem Header="Set Size..." 
+                  Command="{Binding PlacementTarget.DataContext.ShowMegaFormCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+        <MenuItem Header="Duplicate" 
+                  Command="{Binding PlacementTarget.DataContext.DuplicateCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+        <Separator/>
+
+        <MenuItem Header="Exit" 
+                  Command="{Binding PlacementTarget.DataContext.ExitCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+    </ContextMenu>
+
+</ResourceDictionary>

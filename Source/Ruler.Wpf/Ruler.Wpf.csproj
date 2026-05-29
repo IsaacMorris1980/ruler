@@ -157,9 +157,7 @@
     <Compile Include="Common\UniversalScale.cs" />
     <Compile Include="Converters\CenterConverter.cs" />
     <Compile Include="Converters\BooleanToResizeModeConverter.cs" />
-    <Compile Include="Services\AppManager.cs" />
-    <Compile Include="Services\DialogService.cs" />
-    <Compile Include="Services\IDialogService.cs" />
+    <Compile Include="Services\WpfDialogService.cs" />
     <Compile Include="Common\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -167,7 +165,17 @@
     </Compile>
     <Compile Include="Common\TickType.cs" />
     <Compile Include="Converters\ValueToBooleanConverter.cs" />
+    <Compile Include="Services\RulerWindowManager.cs" />
     <Compile Include="Services\SavingService.cs" />
+    <Compile Include="Views\Controls\RulerControls.xaml.cs">
+      <DependentUpon>RulerControls.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Dialogs\Calibration.xaml.cs">
+      <DependentUpon>Calibration.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Dialogs\SetSizeWindow.xaml.cs">
+      <DependentUpon>SetSizeWindow.xaml</DependentUpon>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -181,6 +189,22 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Views\Controls\RulerControls.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Controls\RulerMenu.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Dialogs\Calibration.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Dialogs\SetSizeWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">

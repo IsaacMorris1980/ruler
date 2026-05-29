@@ -1,6 +1,6 @@
 ﻿using System;
 using Ruler.Contracts.Enums;
-using Ruler.Contracts.Models;
+
 
 namespace Ruler.Contracts.Models
 {

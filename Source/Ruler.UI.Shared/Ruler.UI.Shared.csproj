@@ -48,18 +48,6 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Controls\RulerControls.xaml.cs">
-      <DependentUpon>RulerControls.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\RulerShellView.xaml.cs">
-      <DependentUpon>RulerShellView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Dialogs\Calibration.xaml.cs">
-      <DependentUpon>Calibration.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Dialogs\SetSizeWindow.xaml.cs">
-      <DependentUpon>SetSizeWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -82,24 +70,11 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
-    <Page Include="Controls\RulerControls.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Controls\RulerShellView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Dialogs\Calibration.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Dialogs\SetSizeWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
+    <Folder Include="Controls\" />
+    <Folder Include="Dialogs\" />
+  </ItemGroup>
+  <ItemGroup>
     <Page Include="Resources\RulerMenu.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
