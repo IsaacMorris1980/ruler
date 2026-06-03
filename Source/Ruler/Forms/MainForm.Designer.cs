@@ -33,6 +33,7 @@
             // 
             // MainForm
             // 
+            this.ClientSize = new System.Drawing.Size(198, 8);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainForm";
             this.Text = "MainForm";

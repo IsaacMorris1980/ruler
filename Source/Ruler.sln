@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Tests", "Ruler.Tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Shared", "Ruler.Shared\Ruler.Shared.csproj", "{B66439FF-BC75-469F-99FA-70AC0BAC4E7A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Wpf", "Ruler.Wpf\Ruler.Wpf.csproj", "{C3AC2326-9926-4023-8719-FC305944029E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruler.Wpf", "Ruler.Wpf\Ruler.Wpf.csproj", "{14B8A767-044D-451D-9A13-84C41A4CC16A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +29,10 @@ Global
 		{B66439FF-BC75-469F-99FA-70AC0BAC4E7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B66439FF-BC75-469F-99FA-70AC0BAC4E7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B66439FF-BC75-469F-99FA-70AC0BAC4E7A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C3AC2326-9926-4023-8719-FC305944029E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C3AC2326-9926-4023-8719-FC305944029E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C3AC2326-9926-4023-8719-FC305944029E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C3AC2326-9926-4023-8719-FC305944029E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14B8A767-044D-451D-9A13-84C41A4CC16A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14B8A767-044D-451D-9A13-84C41A4CC16A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14B8A767-044D-451D-9A13-84C41A4CC16A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14B8A767-044D-451D-9A13-84C41A4CC16A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

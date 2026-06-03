@@ -48,7 +48,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
     <Compile Include="Enums\HitArea.cs" />
     <Compile Include="Enums\InteractionMode.cs" />
     <Compile Include="Enums\MenuItemEnum.cs" />
@@ -62,6 +61,7 @@
     <Compile Include="Models\ModelBase.cs" />
     <Compile Include="Models\RulerGuideline.cs" />
     <Compile Include="Models\RulerInfo.cs" />
+    <Compile Include="Models\MenuBlueprint.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Factories\RulerFactory.cs" />
     <Compile Include="Services\RulerInfoPreprocessor.cs" />

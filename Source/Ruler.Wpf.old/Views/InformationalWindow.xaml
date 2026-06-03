@@ -1,0 +1,72 @@
+﻿<Window x:Class="Ruler.Wpf.Views.InformationalWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Ruler.Wpf.Views"
+        mc:Ignorable="d"
+       Title="Keyboard Shortcuts Reference" 
+        Height="500" Width="420"
+        WindowStartupLocation="CenterOwner"
+        Background="#F5F5F5" Foreground="Black"
+        FontFamily="Segoe UI" WindowStyle="None"
+        ResizeMode="NoResize" BorderBrush="#007ACC" BorderThickness="1">
+    <Grid Margin="25">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.Resources>
+            <DataTemplate x:Key="ShortcutRowTemplate">
+                <Border BorderBrush="#2D2D30" BorderThickness="0,0,0,1" Padding="0,10">
+                    <DockPanel LastChildFill="True">
+                        <Border DockPanel.Dock="Right" Background="#2D2D30" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Keys}" FontFamily="Consolas" FontWeight="SemiBold" Foreground="#FFD700" FontSize="12"/>
+                        </Border>
+                        <TextBlock Text="{Binding Description}" Foreground="#E0E0E0" FontSize="13" VerticalAlignment="Center" Margin="0,0,15,0" TextWrapping="Wrap"/>
+                    </DockPanel>
+                </Border>
+            </DataTemplate>
+        </Grid.Resources>
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <DockPanel LastChildFill="True">
+                <Button Content="✕" Click="Close_Click" DockPanel.Dock="Right" 
+                        Background="Transparent" Foreground="Gray" BorderThickness="0" 
+                        FontSize="16" Cursor="Hand" VerticalAlignment="Top"/>
+                <TextBlock Text="Ruler Hotkeys" FontSize="24" FontWeight="Bold" Foreground="#007ACC"/>
+            </DockPanel>
+            <TextBlock Text="Quick keyboard commands reference guide" FontSize="12" Foreground="Gray" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <TextBlock Text="NAVIGATION &amp; SIZING" FontSize="11" FontWeight="Bold" Foreground="#808080" Margin="0,0,0,5"/>
+                <ItemsControl Name="NavigationItems" Margin="0,0,0,20"/>
+
+                <TextBlock Text="ACTIONS" FontSize="11" FontWeight="Bold" Foreground="#808080" Margin="0,0,0,5"/>
+                <ItemsControl Name="ActionItems" Margin="0,0,0,20"/>
+
+                <TextBlock Text="RESETS &amp; STATE" FontSize="11" FontWeight="Bold" Foreground="#808080" Margin="0,0,0,5"/>
+                <ItemsControl Name="ResetItems"/>
+            </StackPanel>
+        </ScrollViewer>
+
+       
+
+        <Button Grid.Row="2" Content="Close Guide" Click="Close_Click" Margin="0,15,0,0" 
+                Background="#007ACC" Foreground="White" BorderThickness="0" FontWeight="SemiBold"
+                HorizontalAlignment="Right" Cursor="Hand">
+            <Button.Style>
+                <Style TargetType="Button">
+                    <Setter Property="Background" Value="#007ACC"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#1C97EA"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+    </Grid>
+</Window>

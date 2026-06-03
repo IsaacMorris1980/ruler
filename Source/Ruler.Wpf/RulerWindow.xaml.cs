@@ -10,9 +10,10 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace Ruler.Wpf.Views
+namespace Ruler.Wpf
 {
     /// <summary>
     /// Interaction logic for RulerWindow.xaml
