@@ -4,6 +4,7 @@ using Ruler.Shared.Factories;
 using Ruler.Shared.Interfaces;
 using Ruler.Shared.Models;
 using Ruler.Shared.Services;
+using Ruler.Shared.Services.Magnification;
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
+
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 
 namespace Ruler.Forms
@@ -50,6 +53,11 @@ namespace Ruler.Forms
         private Point _dragStartCursorPos;  // Global screen position
         private Point _dragStartFormPos;    // Original form location
         private Size _dragStartFormSize;
+        private ToolStripMenuItem _magnifierSettingsMenuItem;
+        private bool showMagnifier = false;
+        private int magnifierBoxSize = 100; // Physical screen size of the visual HUD window element
+        private int capturePixelsSize = 20; // Number of real screen pixels sampled (lower = higher zoom)
+        private MagnifierState _magnifierState = new MagnifierState(); 
 
         public RulerInfo RulerData => _rulerInfo; // Expose the RulerInfo for external use (e.g., duplication)  
         public MainForm(RulerInfo info)
@@ -231,7 +239,16 @@ namespace Ruler.Forms
                 this.Invalidate(); // Trigger a repaint to show/hide the guideline
             };
             _contextMenuStrip.Items.Add(miShowGuideline);
-          
+            ToolStripMenuItem toggleItem = new ToolStripMenuItem("Enable Magnifier", null, ToggleMagnifier_Click);
+            _contextMenuStrip.Items.Add(toggleItem);
+
+            // 2. Settings Menu Item (Hidden by Default)
+            _magnifierSettingsMenuItem = new ToolStripMenuItem("Magnifier Options...");
+            _magnifierSettingsMenuItem.DropDownItems.Add(new ToolStripMenuItem("Increase Zoom", null, ZoomIn_Click));
+            _magnifierSettingsMenuItem.DropDownItems.Add(new ToolStripMenuItem("Decrease Zoom", null, ZoomOut_Click));
+
+            _magnifierSettingsMenuItem.Visible = false; // <-- Hidden at startup
+            _contextMenuStrip.Items.Add(_magnifierSettingsMenuItem);
             ToolStripMenuItem miReset = new ToolStripMenuItem("Reset");
             ToolStripMenuItem miResetDefault = new ToolStripMenuItem("Reset To Default");
             miResetDefault.Click += (s, e) =>
@@ -286,6 +303,57 @@ namespace Ruler.Forms
             };
             _contextMenuStrip.Items.Add(miClose);
             _contextMenuStrip.Items.Add(miExitApplication);
+        }
+
+        private void ZoomIn_Click(object sender, EventArgs e)
+        {
+            if (_magnifierSettingsMenuItem != null)
+            {
+                _magnifierSettingsMenuItem.Text = $"Magnifier Options... (Zoom: {_magnifierState.ZoomLevel}x)";
+            }
+            if (_magnifierState.ZoomLevel < 10)
+            {
+                _magnifierState.ZoomLevel += 0.5f;
+                this.Invalidate(); // Trigger a repaint to apply the new zoom level
+            }
+            else
+            {
+                _magnifierSettingsMenuItem.Text = $"Magnifier Options... (Max Zoom Reached)";
+                return;
+            }
+         }
+
+        private void ZoomOut_Click(object sender, EventArgs e)
+        {
+            if (_magnifierSettingsMenuItem != null)
+            {
+                _magnifierSettingsMenuItem.Text = $"Magnifier Options... (Zoom: {_magnifierState.ZoomLevel}x)";
+            }
+            if (_magnifierState.ZoomLevel > 1.5)
+            {
+                _magnifierState.ZoomLevel -= 0.5f;
+                this.Invalidate(); // Trigger a repaint to apply the new zoom level
+            }
+            else
+            {
+                _magnifierSettingsMenuItem.Text = $"Magnifier Options... (Min Zoom Reached)";
+                return;
+            }
+        }
+
+       
+        private void ToggleMagnifier_Click(object sender, EventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+       private void ToggleMagnifier()
+        {
+            _magnifierState.IsActive = !_magnifierState.IsActive;
+            if (_magnifierSettingsMenuItem != null)
+            {
+                _magnifierSettingsMenuItem.Visible = _magnifierState.IsActive; // Show settings only when magnifier is enabled
+            }
+            this.Invalidate(); // Trigger a repaint to show/hide the magnifier
         }
         private ToolStripMenuItem CreateEnumMenu(string label)
         {
@@ -655,6 +723,49 @@ namespace Ruler.Forms
                     e.Graphics.DrawString(tooltipText, this.Font, Brushes.Blue, centerRect, centerFormat);
                 }
             }
+            if (_magnifierState.IsActive)
+            {
+                // 1. Fetch raw pixels centered around current mouse position 
+                Point mousePos = Cursor.Position; // Simplify: Cursor.Position is already in absolute Screen coordinates
+
+                // Update state tracking parameters before calculating boundaries
+                _magnifierState.ScreenX = mousePos.X;
+                _magnifierState.ScreenY = mousePos.Y;
+
+                // Use state-driven sizes for calculation pass
+                int captureSize = _magnifierState.CapturePixelSize; // Dynamic based on ZoomLevel
+                int viewportSize = _magnifierState.ViewportSize;   // Physical container size
+
+                using (Bitmap rawCapture = MagnifierEngine.CaptureRegion(mousePos, captureSize))
+                {
+                    // 2. Define location placement layout for the magnifier display inside the ruler window area
+                    // Placing it safely on the far right section of the ruler workspace
+                    int magnifierX = this.Width - viewportSize - 20;
+                    int magnifierY = (this.Height - viewportSize) / 2; // Vertically centered
+                    Rectangle destRect = new Rectangle(magnifierX, magnifierY, viewportSize, viewportSize);
+
+                    // 3. Force crisp pixel scaling logic (Critical for magnifying individual pixels cleanly)
+                    e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                    e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+
+                    // Draw captured pixels stretched out to box size
+                    e.Graphics.DrawImage(rawCapture, destRect);
+
+                    // 4. Layer an accent crosshair boundary overlay over the dead center pixel 
+                    using (Pen crosshairPen = new Pen(Color.FromArgb(180, Color.Red), 1))
+                    {
+                        // Calculate center point based on actual visual viewport size
+                        int centerX = magnifierX + (viewportSize / 2);
+                        int centerY = magnifierY + (viewportSize / 2);
+
+                        e.Graphics.DrawLine(crosshairPen, centerX - 8, centerY, centerX + 8, centerY);
+                        e.Graphics.DrawLine(crosshairPen, centerX, centerY - 8, centerX, centerY + 8);
+                    }
+
+                    // Outline frame
+                    e.Graphics.DrawRectangle(Pens.DimGray, destRect);
+                }
+            }
         }
         private void DrawLabelOnBothSides(Graphics g, int pos, string text, Orientation orientation)
         {
@@ -694,7 +805,7 @@ namespace Ruler.Forms
         }
         public void SetTooltip(string text)
         {
-            ToolTip tt = new ToolTip();
+            System.Windows.Forms.ToolTip tt = new System.Windows.Forms.ToolTip();
             tt.Show(text, this, 1000);
         }
     
