@@ -49,6 +49,7 @@
       <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
     </Reference>
     <Reference Include="System.Configuration" />
+
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Formats.Asn1, Version=10.0.0.10, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -81,30 +82,16 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Commands\DelegateCommand.cs" />
     <Compile Include="Enums\HitArea.cs" />
     <Compile Include="Enums\InteractionMode.cs" />
     <Compile Include="Enums\MenuItemEnum.cs" />
     <Compile Include="Enums\ResizeRegion.cs" />
     <Compile Include="Enums\SaveTypes.cs" />
-    <Compile Include="Helpers\EnumExtenstions.cs" />
-    <Compile Include="Helpers\MenuHelper.cs" />
-    <Compile Include="Interfaces\IMainFormFactory.cs" />
-    <Compile Include="Interfaces\IRuler.cs" />
-    <Compile Include="Interfaces\IRulerFactory.cs" />
-    <Compile Include="Interfaces\IRulerInfoPreprocessor.cs" />
-    <Compile Include="Interfaces\IRulerRegistry.cs" />
-    <Compile Include="Interfaces\IPersistanceService.cs" />
-    <Compile Include="Interfaces\IRulerSerializer.cs" />
-    <Compile Include="Models\FileSignature.cs" />
     <Compile Include="Models\GithubAsset.cs" />
     <Compile Include="Models\GitHubRelease.cs" />
     <Compile Include="Interfaces\IRulerInfo.cs" />
-    <Compile Include="Models\ImageData.cs" />
-    <Compile Include="Models\MagnifierState.cs" />
     <Compile Include="Models\MenuItemHolder.cs" />
     <Compile Include="Models\MenuItemMetadata.cs" />
-    <Compile Include="Models\MenuItemModel.cs" />
     <Compile Include="Models\ModelBase.cs" />
     <Compile Include="Models\RulerGuideline.cs" />
     <Compile Include="Models\RulerInfo.cs" />
@@ -124,12 +111,13 @@
     <Compile Include="Attributes\SyncWithUIAttribute.cs" />
     <Compile Include="Services\SecurityService.cs" />
     <Compile Include="Services\UpdateService.cs" />
+    <Compile Include="Services\RulerInfoPreprocessor.cs" />
+    <Compile Include="Services\SettingsService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="Settings.StyleCop" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets" Condition="Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
