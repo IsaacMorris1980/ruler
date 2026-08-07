@@ -105,9 +105,7 @@ namespace Ruler.Wpf.Windows
             };
             PoplateCommands();
             PopulateMenu();
-<<<<<<< HEAD
             Loaded += async (s, e) => await CheckForUpdatesOnStartupAsync();
-=======
             this.LocationChanged += OnWindowLocationChanged;
             this.SizeChanged += OnWindowSizeChanged;
             UpdateOpacityMenuStates();
@@ -138,7 +136,6 @@ namespace Ruler.Wpf.Windows
             _rulerInfo.Height = (int)this.ActualHeight;
 
             _isUpdatingFromWindow = false;
->>>>>>> fixed guideline diplays when lock
         }
         public void PoplateCommands()
         {
