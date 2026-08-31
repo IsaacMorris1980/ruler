@@ -22,6 +22,55 @@ namespace Ruler.Shared.Services
         private static readonly HttpClient HttpClient = new HttpClient();
 
         /// <summary>
+        /// Queries the GitHub Releases API to dynamically retrieve download URLs 
+        /// for the manifest, signature file, and zip package using GitHubRelease and GitHubAsset models.
+        /// </summary>
+        public static async Task<UpdatePackageInfo> GetLatestGitHubAssetUrlsAsync(string repoOwner, string repoName)
+        {
+            string apiUrl = $"https://api.github.com/repos/{repoOwner}/{repoName}/releases/latest";
+
+            // GitHub API requires a custom User-Agent header or it will return a 403 Forbidden response
+            if (!HttpClient.DefaultRequestHeaders.Contains("User-Agent"))
+            {
+                HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("RulerUpdaterClient");
+            }
+
+            string jsonResponse = await HttpClient.GetStringAsync(apiUrl);
+            var release = JsonConvert.DeserializeObject<GitHubRelease>(jsonResponse);
+
+            if (release == null || release.Assets == null)
+            {
+                throw new InvalidOperationException("Could not retrieve GitHub release assets.");
+            }
+
+            string manifestUrl = null;
+            string sigUrl = null;
+            string zipUrl = null;
+            UpdatePackageInfo pack = new UpdatePackageInfo();
+            foreach (var asset in release.Assets)
+            {
+                if (asset.Name.Equals("manifest.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    pack.ManifestUrl = asset.DownloadUrl; 
+                }
+                else if (asset.Name.Equals("manifest.json.sig", StringComparison.OrdinalIgnoreCase))
+                {
+                    pack.SigUrl = asset.DownloadUrl; 
+                }
+                else if (asset.Name.Equals("ruler.zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    pack.ZipUrl = asset.DownloadUrl; 
+                }
+            }
+
+            if (string.IsNullOrEmpty(manifestUrl) || string.IsNullOrEmpty(sigUrl) || string.IsNullOrEmpty(zipUrl))
+            {
+                throw new FileNotFoundException("One or more required update assets (manifest.json, sig, zip) were missing from the GitHub release.");
+            }
+
+            return pack;
+        }
+        /// <summary>
         /// Checks the remote manifest to see if a newer version is available compared to the current app version.
         /// </summary>
         public static async Task<(bool UpdateAvailable, string LatestVersion)> CheckForUpdateAsync(string manifestUrl, string currentVersion)
@@ -53,138 +102,60 @@ namespace Ruler.Shared.Services
         }
 
         /// <summary>
-        /// Downloads, extracts, cryptographically verifies the update package[cite: 1, 2], 
-        /// and launches Ruler.Updater to perform the file replacement.
+        /// Downloads the update artifacts (manifest, detached signature, and zip package) 
+        /// and hands them off to SecurityService for cryptographic verification and execution.
         /// </summary>
-        public static async Task DownloadAndApplyUpdateAsync(string manifestUrl, string zipUrl, string targetAppDirectory)
+        public static async Task DownloadAndApplyUpdateAsync(string manifestUrl, string sigUrl, string zipUrl, string targetAppDirectory)
         {
-            string stagingDirectory = Path.Combine(Path.GetTempPath(), "RulerUpdateStaging_" + Guid.NewGuid());
-            string tempZipPath = Path.Combine(Path.GetTempPath(), $"RulerUpdate_{Guid.NewGuid()}.zip");
-            bool validationSuccessful = false;
-
             try
             {
-                // 1. Download and deserialize the update manifest using Newtonsoft.Json[cite: 2]
-                string jsonResponse = await HttpClient.GetStringAsync(manifestUrl);
-                var manifest = JsonConvert.DeserializeObject<UpdateManifest>(jsonResponse);
+                Directory.CreateDirectory(targetAppDirectory);
 
-                if (manifest == null || string.IsNullOrEmpty(manifest.ZipSignature) || manifest.Files == null)
-                {
-                    throw new InvalidOperationException("Invalid update manifest structure.");
-                }
+                string manifestPath = Path.Combine(targetAppDirectory, UpdateConstants.ManifestFileName);
+                string sigPath = Path.Combine(targetAppDirectory, UpdateConstants.ManifestSigFileName);
+                string zipPath = Path.Combine(targetAppDirectory, UpdateConstants.ZipFileName);
 
-                // 2. Download the ZIP archive bytes asynchronously
+                // 1. Download manifest.json
+                string manifestJson = await HttpClient.GetStringAsync(manifestUrl);
+                await Task.Run(() => File.WriteAllText(manifestPath, manifestJson));
+
+                // 2. Download manifest.json.sig (detached signature)
+                string manifestSig = await HttpClient.GetStringAsync(sigUrl);
+                await Task.Run(() => File.WriteAllText(sigPath, manifestSig));
+
+                // 3. Download ruler.zip package bytes
                 byte[] zipBytes = await HttpClient.GetByteArrayAsync(zipUrl);
-                await Task.Run(() => File.WriteAllBytes(tempZipPath, zipBytes));
+                await Task.Run(() => File.WriteAllBytes(zipPath, zipBytes));
 
-                // 3. Verify the overall ZIP package signature using the hardcoded Active public key
-                bool isZipValid = SecurityService.VerifyFileTrust(tempZipPath, manifest.ZipSignature);
-                if (!isZipValid)
+                // 4. Delegate verification, staging, and updater handoff to SecurityService
+                bool success = SecurityService.VerifyAndApplyUpdatePackage(targetAppDirectory, targetAppDirectory);
+
+                if (!success)
                 {
-                    throw new SecurityException("CRITICAL: ZIP package signature verification failed! Update rejected.");
+                    throw new System.Security.SecurityException("CRITICAL: Update package verification failed. Update rejected.");
                 }
-
-                // 4. Extract the ZIP package to a temporary staging folder
-                Directory.CreateDirectory(stagingDirectory);
-                ZipFile.ExtractToDirectory(tempZipPath, stagingDirectory);
-
-                // 5. Post-extraction verification: Validate every extracted file against its manifest SHA-256 hash[cite: 1, 2]
-                using (var sha256 = SHA256.Create())
-                {
-                    foreach (var fileSig in manifest.Files)
-                    {
-                        string extractedFilePath = Path.Combine(stagingDirectory, fileSig.FileName);
-
-                        if (!File.Exists(extractedFilePath))
-                        {
-                            throw new FileNotFoundException($"Update integrity error: Required file '{fileSig.FileName}' was missing from the archive.");
-                        }
-
-                        using (var fileStream = File.OpenRead(extractedFilePath))
-                        {
-                            byte[] hashBytes = sha256.ComputeHash(fileStream);
-                            string computedHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-
-                            if (!string.Equals(computedHash, fileSig.Hash, StringComparison.OrdinalIgnoreCase))
-                            {
-                                throw new SecurityException($"CRITICAL: Hash mismatch for file '{fileSig.FileName}'. The file may have been corrupted or tampered with.");
-                            }
-                        }
-                    }
-                }
-
-                // Validation passed completely. Hand over staging folder to the updater process.
-                validationSuccessful = true;
-
-                // 6. Launch Ruler.Updater and exit the application
-                LaunchUpdaterAndExit(stagingDirectory, targetAppDirectory);
             }
             catch
             {
-                CleanupResources(stagingDirectory, tempZipPath);
+                // Cleanup partial downloads if an exception occurs before verification takes over
+                CleanupFailedDownloads(targetAppDirectory);
                 throw;
             }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(tempZipPath)) File.Delete(tempZipPath);
-                }
-                catch { }
-
-                if (!validationSuccessful)
-                {
-                    CleanupResources(stagingDirectory, null);
-                }
-            }
         }
 
-        private static void LaunchUpdaterAndExit(string stagingDirectory, string targetAppDirectory)
-        {
-            string updaterExePath = Path.Combine(targetAppDirectory, "Ruler.Updater.exe");
-            string rulerExePath = Path.Combine(targetAppDirectory, "Ruler.exe");
-
-            if (!File.Exists(updaterExePath))
-            {
-                throw new FileNotFoundException("Updater executable ('Ruler.Updater.exe') not found in the application directory.");
-            }
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = updaterExePath,
-                Arguments = $"\"{rulerExePath}\" \"{stagingDirectory}\" \"{targetAppDirectory}\"",
-                UseShellExecute = true
-            };
-
-            Process.Start(psi);
-            Environment.Exit(0);
-        }
-
-        private static void CleanupResources(string stagingDirectory, string tempZipPath)
+        private static void CleanupFailedDownloads(string targetDir)
         {
             try
             {
-                if (!string.IsNullOrEmpty(stagingDirectory) && Directory.Exists(stagingDirectory))
-                {
-                    Directory.Delete(stagingDirectory, recursive: true);
-                }
-            }
-            catch
-            {
-                // Suppress cleanup exceptions
-            }
+                string manifestPath = Path.Combine(targetDir, "manifest.json");
+                string sigPath = Path.Combine(targetDir, "manifest.json.sig");
+                string zipPath = Path.Combine(targetDir, "ruler.zip");
 
-            try
-            {
-                if (!string.IsNullOrEmpty(tempZipPath) && File.Exists(tempZipPath))
-                {
-                    File.Delete(tempZipPath);
-                }
+                if (File.Exists(manifestPath)) File.Delete(manifestPath);
+                if (File.Exists(sigPath)) File.Delete(sigPath);
+                if (File.Exists(zipPath)) File.Delete(zipPath);
             }
-            catch
-            {
-                // Suppress cleanup exceptions
-            }
+            catch { }
         }
     }
 }

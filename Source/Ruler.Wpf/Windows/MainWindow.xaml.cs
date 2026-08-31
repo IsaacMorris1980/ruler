@@ -3,6 +3,7 @@ using Ruler.Shared.Enums;
 using Ruler.Shared.Helpers;
 using Ruler.Shared.Interfaces;
 using Ruler.Shared.Models;
+using Ruler.Shared.Services;
 
 using System;
 using System.Collections.Generic;
@@ -37,6 +38,9 @@ namespace Ruler.Wpf.Windows
         public RulerInfo RulerData => _rulerInfo;
         public event EventHandler<RulerInfo> DuplicateRequested;
         private bool _showToolTips = true;
+        private UpdatePackageInfo _cachedUpdatePackage;
+        private MenuItemModel _updateMenuItem;
+        private bool _isUpdateAvailable = false;
         public bool ShowToolTips
         {
             get => _showToolTips;
@@ -66,6 +70,7 @@ namespace Ruler.Wpf.Windows
         public ICommand ToggleMagnifierCommand { get; private set; }
         public ICommand SetSaveTypeCommand { get; private set; }
         public ICommand SetMagnficationScaleCommand { get; private set; }
+        public ICommand CheckOrApplyUpdateCommand { get; private set; }
 
         // DI Dependencies
         private readonly IRulerFactory _rulerFactory;
@@ -240,9 +245,12 @@ namespace Ruler.Wpf.Windows
                         }
                     }
 
+
                     UpdateSaveTypeMenuStates();
                 }
             });
+            CheckOrApplyUpdateCommand = new DelegateCommand(async _ => await HandleUpdateClickAsync());
+           
 
             SetMagnficationScaleCommand = new DelegateCommand<object>(param =>
             {
@@ -424,7 +432,15 @@ namespace Ruler.Wpf.Windows
                 InputGestureText = "G",
                 Command = ToggleShowGuidelineCommand
             });
-             var magnificationMenu = MenuHelper.CreateRangeMenuItems(
+            _updateMenuItem = new MenuItemModel()
+            {
+                Header = "Check for Updates",
+                IsCheckable = false,
+                Command = CheckOrApplyUpdateCommand,
+                InputGestureText = "Ctrl + U"
+            };
+            MenuItems.Add(_updateMenuItem);
+            var magnificationMenu = MenuHelper.CreateRangeMenuItems(
     start: 1.5,
     end: 10.0,
     step: 0.5,
@@ -816,6 +832,91 @@ namespace Ruler.Wpf.Windows
         {
             throw new NotImplementedException();
         }
+        private async Task CheckForUpdatesOnStartupAsync()
+        {
+            try
+            {
+                _cachedUpdatePackage = await UpdateService.GetLatestGitHubAssetUrlsAsync("your-github-owner", "your-repo-name");
+
+                string currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+                var (available, latestVersion) = await UpdateService.CheckForUpdateAsync(_cachedUpdatePackage.ManifestUrl, currentVersion);
+
+                if (available && _updateMenuItem != null)
+                {
+                    _isUpdateAvailable = true;
+                    _updateMenuItem.Header = $"Update Available: v{latestVersion}";
+                }
+            }
+            catch
+            {
+                // Fail silently during background checks
+            }
+        }
+
+        private async Task HandleUpdateClickAsync()
+        {
+            if (!_isUpdateAvailable)
+            {
+                // Manual check if clicked before background check finished
+                if (_updateMenuItem != null) _updateMenuItem.Header = "Checking for Updates...";
+
+                try
+                {
+                    _cachedUpdatePackage = await UpdateService.GetLatestGitHubAssetUrlsAsync("your-github-owner", "your-repo-name");
+                    string currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+                    var (available, latestVersion) = await UpdateService.CheckForUpdateAsync(_cachedUpdatePackage.ManifestUrl, currentVersion);
+
+                    if (available)
+                    {
+                        _isUpdateAvailable = true;
+                        if (_updateMenuItem != null) _updateMenuItem.Header = $"Update Available: v{latestVersion}";
+                    }
+                    else
+                    {
+                        if (_updateMenuItem != null) _updateMenuItem.Header = "Ruler is Up to Date";
+                        await Task.Delay(2000);
+                        if (_updateMenuItem != null) _updateMenuItem.Header = "Check for Updates";
+                    }
+                }
+                catch
+                {
+                    if (_updateMenuItem != null) _updateMenuItem.Header = "Check Failed";
+                    await Task.Delay(2000);
+                    if (_updateMenuItem != null) _updateMenuItem.Header = "Check for Updates";
+                }
+            }
+            else
+            {
+                // User clicked the available update -> Download and Apply
+                if (_cachedUpdatePackage == null) return;
+
+                if (_updateMenuItem != null) _updateMenuItem.Header = "Downloading Update...";
+                try
+                {
+                    string targetDir = AppDomain.CurrentDomain.BaseDirectory;
+
+                    // Downloads files, verifies cryptographic signatures via SecurityService, and stages them
+                    await UpdateService.DownloadAndApplyUpdateAsync(
+                        _cachedUpdatePackage.ManifestUrl,
+                        _cachedUpdatePackage.SigUrl,
+                        _cachedUpdatePackage.ZipUrl,
+                        targetDir
+                    );
+
+                    if (_updateMenuItem != null) _updateMenuItem.Header = "Restarting...";
+                    await Task.Delay(1000);
+
+                    Application.Current.Shutdown();
+                }
+                catch (Exception ex)
+                {
+                    if (_updateMenuItem != null) _updateMenuItem.Header = "Update Failed";
+                    MessageBox.Show($"Update installation failed: {ex.Message}", "Security Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    await Task.Delay(3000);
+                    if (_updateMenuItem != null) _updateMenuItem.Header = "Update Available";
+                }
+            }
+        }
         protected override void OnKeyDown(KeyEventArgs e)
         {
             base.OnKeyDown(e);
@@ -832,6 +933,15 @@ namespace Ruler.Wpf.Windows
             bool down = Keyboard.IsKeyDown(Key.Down);
             bool left = Keyboard.IsKeyDown(Key.Left);
             bool right = Keyboard.IsKeyDown(Key.Right);
+            if (isCtrl && e.Key == Key.U)
+            {
+                if (CheckOrApplyUpdateCommand.CanExecute(null))
+                {
+                    CheckOrApplyUpdateCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+            }
 
             if (up && left) { dx = -1; dy = -1; }
             else if (up && right) { dx = 1; dy = -1; }

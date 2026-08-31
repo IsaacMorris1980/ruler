@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Ruler.Shared.Models;
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,26 +9,28 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace Ruler.Updater
 {
     class Program
     {
         static void Main(string[] args)
         {
-            // Expected 3 arguments:
-            // args[0] = Path to Ruler.exe (to restart)
-            // args[1] = Source path (staging directory containing the new verified executable)
-            // args[2] = Target path (main installation directory)
-            if (args.Length < 3)
+            // Expected 4 arguments:
+            // args[0] = Source executable path
+            // args[1] = Source config path
+            // args[2] = Target directory
+            // args[3] = Executable name
+            if (args.Length < 4)
             {
-                Console.WriteLine("Usage: Ruler.Updater <rulerExePath> <sourceDirectory> <targetDirectory>");
+                Console.WriteLine("Usage: Ruler.Updater <sourceExePath> <sourceConfigPath> <targetDirectory> <executableName>");
                 return;
             }
 
-            string rulerExePath = args[0];
-            string sourceDirectory = args[1];
+            string sourceRulerExe = args[0];
+            string sourceRulerExeConfig  = args[1];
             string targetDirectory = args[2];
-
+            string exeName = args[3];
             Console.WriteLine("Ruler Updater initiated...");
 
             try
@@ -34,57 +38,63 @@ namespace Ruler.Updater
                 // 1. Give the main application time to completely shut down and release file locks
                 Thread.Sleep(1500);
 
-                // Explicitly wait for any lingering Ruler process to exit
+                // Explicitly wait for any lingering process to exit (using name without extension)
                 try
                 {
-                    foreach (var process in Process.GetProcessesByName("Ruler"))
+                    string processName = Path.GetFileNameWithoutExtension(exeName);
+                    foreach (var process in Process.GetProcessesByName(processName))
                     {
                         process.WaitForExit(5000);
                     }
                 }
                 catch { }
 
-                // 2. Validate source directory exists
-                if (!Directory.Exists(sourceDirectory))
-                {
-                    Console.WriteLine("Error: Source staging directory does not exist.");
-                    return;
-                }
+              
+                
 
-                // 3. Copy only the executable file
-                string exeName = Path.GetFileName(rulerExePath); // e.g., "Ruler.exe"
-                string sourceFile = Path.Combine(sourceDirectory, exeName);
+                // 2. Copy only the executable file
+                
                 string targetFile = Path.Combine(targetDirectory, exeName);
+             
+                string targetFileConfig = Path.Combine(targetDirectory, $"{exeName}.config");
 
-                if (File.Exists(sourceFile))
+                if (File.Exists(sourceRulerExe))
                 {
                     Console.WriteLine($"Copying updated executable to: {targetFile}");
-                    File.Copy(sourceFile, targetFile, overwrite: true);
+                    File.Copy(sourceRulerExe, targetFile, overwrite: true);
                 }
                 else
                 {
                     Console.WriteLine($"Error: Executable '{exeName}' not found in source staging directory.");
                     return;
                 }
-
-                // 4. Comprehensive Cleanup Routine
-                Console.WriteLine("Cleaning up temporary update files and archives...");
-
-                // Delete staging folder with a retry loop in case files are briefly locked
-                DeleteDirectoryWithRetry(sourceDirectory);
-
-                // Purge any leftover temporary update ZIP files in the system temp folder
-                PurgeTempUpdateZips();
-
-                // 5. Restart the updated Ruler application
-                if (File.Exists(rulerExePath))
+                if (File.Exists(sourceRulerExeConfig))
                 {
-                    Console.WriteLine("Restarting Ruler...");
-                    Process.Start(rulerExePath);
+                    Console.WriteLine($"Copying updated config to: {targetFileConfig}");
+                    File.Copy(sourceRulerExeConfig, targetFileConfig, overwrite: true);
                 }
                 else
                 {
-                    Console.WriteLine($"Warning: Executable not found at {rulerExePath}, unable to restart automatically.");
+                    Console.WriteLine($"Warning: Config file '{exeName}.config' not found in source staging directory.");
+                }
+                // 3. Comprehensive Cleanup Routine
+                Console.WriteLine("Cleaning up temporary update files and archives...");
+                string sourceDirectory = Path.GetDirectoryName(sourceRulerExe);
+                DeleteDirectoryWithRetry(sourceDirectory);
+                DeleteFileIfExists(Path.Combine(targetDirectory, UpdateConstants.ManifestFileName));
+                DeleteFileIfExists(Path.Combine(targetDirectory, UpdateConstants.ManifestSigFileName));
+                DeleteFileIfExists(Path.Combine(targetDirectory, UpdateConstants.ZipFileName));
+                PurgeTempUpdateZips();
+
+                // 5. Restart the updated application
+                if (File.Exists(targetFile))
+                {
+                    Console.WriteLine("Restarting application...");
+                    Process.Start(targetFile);
+                }
+                else
+                {
+                    Console.WriteLine($"Warning: Executable not found at {targetFile}, unable to restart automatically.");
                 }
             }
             catch (Exception ex)
@@ -115,13 +125,29 @@ namespace Ruler.Updater
                 }
             }
         }
+        private static void DeleteFileIfExists(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Failed to delete file '{filePath}'. Exception: {ex.Message}");
+            }
+        }
 
         private static void PurgeTempUpdateZips()
         {
             try
             {
                 string tempPath = Path.GetTempPath();
-                string[] leftoverZips = Directory.GetFiles(tempPath, "RulerUpdate_*.zip");
+                // Use the shared constant pattern or base name for cleanup
+                string searchPattern = $"*{UpdateConstants.ZipFileName}";
+                string[] leftoverZips = Directory.GetFiles(tempPath, searchPattern);
                 foreach (string zip in leftoverZips)
                 {
                     try
