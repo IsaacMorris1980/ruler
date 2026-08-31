@@ -42,6 +42,7 @@ namespace Ruler.Wpf.Windows
         private UpdatePackageInfo _cachedUpdatePackage;
         private MenuItemModel _updateMenuItem;
         private bool _isUpdateAvailable = false;
+
         private string _owner = "IsaacMorris1980";
         private string _repo = "ruler";
         private Point? _startPoint = null;
@@ -105,6 +106,7 @@ namespace Ruler.Wpf.Windows
             };
             PoplateCommands();
             PopulateMenu();
+
             Loaded += async (s, e) => await CheckForUpdatesOnStartupAsync();
             this.LocationChanged += OnWindowLocationChanged;
             this.SizeChanged += OnWindowSizeChanged;
@@ -170,7 +172,6 @@ namespace Ruler.Wpf.Windows
                 _rulerInfo.Width =(int)this.Width;
                 _rulerInfo.Height = (int)this.Height;
                 _rulerInfo.IsVertical = !_rulerInfo.IsVertical;
-
             var menuItem = MenuItems.FirstOrDefault(i => i.Header == "Is Vertical?");
                 if (menuItem != null)
                 {
@@ -199,7 +200,23 @@ namespace Ruler.Wpf.Windows
             ToggleShowGuidelineCommand = new DelegateCommand(_ =>
             {
                 _rulerInfo.Guideline.IsEnabled = !_rulerInfo.Guideline.IsEnabled;
-               
+
+                // If enabling the guideline and position hasn't been set yet
+                if (_rulerInfo.Guideline.IsEnabled && _rulerInfo.Guideline.Position == 0)
+                {
+                    var mousePos = Mouse.GetPosition(this);
+                    bool isMouseInside = mousePos.X >= 0 && mousePos.X <= ActualWidth &&
+                                         mousePos.Y >= 0 && mousePos.Y <= ActualHeight;
+
+                    if (isMouseInside)
+                    {
+                        _rulerInfo.Guideline.Position = _rulerInfo.IsVertical ? mousePos.Y : mousePos.X;
+                    }
+                    else
+                    {
+                        _rulerInfo.Guideline.Position = _rulerInfo.IsVertical ? ActualHeight / 2 : ActualWidth / 2;
+                    }
+                }
                 var menuItem = MenuItems.FirstOrDefault(i => i.Header == "Show Guideline");
                 if (menuItem != null)
                 {
@@ -283,8 +300,6 @@ namespace Ruler.Wpf.Windows
                 updateWindow.ShowDialog();
             }
             );
-           
-
             SetMagnficationScaleCommand = new DelegateCommand<object>(param =>
             {
                 double scale = 0;
@@ -537,21 +552,18 @@ namespace Ruler.Wpf.Windows
     step: 5,
     formatString: "{0}%",
     valueSelector: i => (double)i / 100.0, // Converts 50 to 0.5
-    command: SetOpacityCommand
-);
+    command: SetOpacityCommand);
             MenuItems.Add( new MenuItemModel()
             {
                 Header = "Opacity",
                 ToolTip = "Select i and see the different opacity commands on the short cuts page",
                 Items = opacitymenuitems
-               
             });
             var saveMenuItems = SaveTypes.None.ToMenuItems(SetSaveTypeCommand);
            MenuItems.Add( new MenuItemModel()
             {
                 Header = "Save Rule Data?",
                 Items = saveMenuItems
-                
             });
 
             MenuItems.Add(new MenuItemModel
@@ -672,9 +684,7 @@ namespace Ruler.Wpf.Windows
             if (!_rulerInfo.Guideline.IsLocked)
             {
                 var position = e.GetPosition(this);
-
                 _rulerInfo.Guideline.Position = _rulerInfo.IsVertical ? position.Y : position.X;
-                
             }
             this.InvalidateView();
         }
@@ -796,7 +806,6 @@ namespace Ruler.Wpf.Windows
                         new Point(_rulerInfo.Guideline.Position, ActualHeight));
                 }
             }
-
         }
 
         private void DrawHorizontalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
@@ -808,7 +817,6 @@ namespace Ruler.Wpf.Windows
                 bool isMajor = (x % 50 == 0);
                 bool isMedium = (x % 25 == 0);
                 double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
-
                 dc.DrawLine(pen, new Point(x, 0.5), new Point(x, tickLength));
                 dc.DrawLine(pen, new Point(x, ActualHeight - 0.5), new Point(x, ActualHeight - tickLength));
                 if (isMajor && x > 0)
@@ -872,7 +880,6 @@ namespace Ruler.Wpf.Windows
             }
         }
         // Mouse Events
-      
 
         // Implementation of IRuler
         public void SetRulerInfo(RulerInfo ruler)
@@ -946,7 +953,6 @@ namespace Ruler.Wpf.Windows
             }
             catch
             {
-                // Fail silently during background checks
                 Console.WriteLine("failed update check during startup");
             }
         }
@@ -1031,15 +1037,6 @@ namespace Ruler.Wpf.Windows
             bool down = Keyboard.IsKeyDown(Key.Down);
             bool left = Keyboard.IsKeyDown(Key.Left);
             bool right = Keyboard.IsKeyDown(Key.Right);
-            //if (isCtrl && e.Key == Key.U)
-            //{
-            //    if (CheckOrApplyUpdateCommand.CanExecute(null))
-            //    {
-            //        CheckOrApplyUpdateCommand.Execute(null);
-            //        e.Handled = true;
-            //        return;
-            //    }
-            //}
 
             if (up && left) { dx = -1; dy = -1; }
             else if (up && right) { dx = 1; dy = -1; }
@@ -1127,7 +1124,6 @@ namespace Ruler.Wpf.Windows
         {
             OnPropertyChanged(string.Empty);
         }
-
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             // Ensure _rulerInfo is initialized before updating fields

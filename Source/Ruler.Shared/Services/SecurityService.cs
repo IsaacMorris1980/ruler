@@ -63,6 +63,7 @@ namespace Ruler.Shared.Services
 
         public static bool VerifyFileHash(string filePath, string expectedHash)
         {
+
             if (!File.Exists(filePath)) return false;
 
             try
@@ -85,6 +86,7 @@ namespace Ruler.Shared.Services
         {
             if (fileSig == null || !File.Exists(filePath)) return false;
 
+
             if (!VerifyFileHash(filePath, fileSig.Hash))
             {
                 return false;
@@ -94,7 +96,11 @@ namespace Ruler.Shared.Services
             return VerifyData(fileBytes, fileSig.Signature);
         }
 
-        public static string VerifyAndApplyUpdatePackage(string packageDirectory, string targetInstallDirectory)
+        /// <summary>
+        /// Verifies the detached manifest signature, package-level zip signature, and all individual inner file signatures.
+        /// If valid, deploys the new updater, launches it to update the running WPF application, and exits[cite: 6].
+        /// </summary>
+        public static bool VerifyAndApplyUpdatePackage(string packageDirectory, string targetInstallDirectory)
         {
             string manifestPath = Path.Combine(packageDirectory, UpdateConstants.ManifestFileName);
             string sigPath = Path.Combine(packageDirectory, UpdateConstants.ManifestSigFileName);
@@ -109,12 +115,13 @@ namespace Ruler.Shared.Services
 
             if (!File.Exists(manifestPath) || !File.Exists(sigPath) || !File.Exists(zipPath))
             {
+
                 return "Manifest, Signature, or Zip file is missing";
             }
 
             // 1. Read raw manifest bytes directly to preserve exact line-ending layout for signature verification[cite: 3]
             byte[] manifestBytes = File.ReadAllBytes(manifestPath);
-            string manifestSig = File.ReadAllText(sigPath).Trim();
+            string manifestSig = File.ReadAllText(sigPath).Trim()
 
             if (!VerifyData(manifestBytes, manifestSig))
             {
@@ -151,7 +158,6 @@ namespace Ruler.Shared.Services
                 string sourceUpdaterConfigPath = string.Empty;
                 string sourceWpfPath = string.Empty;
                 string sourceWpfConfigPath = string.Empty;
-
                 // 5. Verify individual file signatures[cite: 3]
                 foreach (var fileSig in manifest.Files)
                 {
@@ -178,9 +184,11 @@ namespace Ruler.Shared.Services
                     }
                     if (fileSig.FileName.Equals(currentExeName + ".config", StringComparison.OrdinalIgnoreCase))
                     {
+
                         sourceWpfConfigPath = targetFilePath;
                     }
                 }
+
 
                 if (string.IsNullOrEmpty(sourceUpdaterPath) || string.IsNullOrEmpty(sourceWpfPath) || string.IsNullOrEmpty(sourceUpdaterConfigPath) || string.IsNullOrEmpty(sourceWpfConfigPath))
                 {
@@ -198,7 +206,8 @@ namespace Ruler.Shared.Services
                 if (!File.Exists(targetUpdaterPath))
                 {
                     return "Failed to copy updater executable";
-                }
+				}
+
 
                 FileInfo sourceInfo = new FileInfo(sourceUpdaterPath);
                 FileInfo targetInfo = new FileInfo(targetUpdaterPath);
@@ -219,6 +228,7 @@ namespace Ruler.Shared.Services
 
                 Environment.Exit(0);
                 return "Update applied successfully";
+
             }
             catch
             {
@@ -226,6 +236,13 @@ namespace Ruler.Shared.Services
             }
             finally
             {
+                CleanupFailedPackage();
+                DeleteFolderIfExists(tempExtractPath);
+                PurgeTempUpdateZips();
+            }
+            finally
+            {
+                // Clean up the temporary extraction folder (if exit didn't occur first)
                 CleanupFailedPackage();
                 DeleteFolderIfExists(tempExtractPath);
                 PurgeTempUpdateZips();
@@ -251,16 +268,17 @@ namespace Ruler.Shared.Services
                 catch { }
             }
         }
-
         private static void PurgeTempUpdateZips()
         {
             try
             {
                 string tempPath = Path.GetTempPath();
+t
                 string searchPattern = $"*{UpdateConstants.ZipFileName}";
                 string[] leftoverZips = Directory.GetFiles(tempPath, searchPattern);
                 foreach (string zip in leftoverZips)
                 {
+
                     try { File.Delete(zip); } catch { }
                 }
             }
