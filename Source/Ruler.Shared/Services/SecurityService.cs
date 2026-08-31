@@ -1,6 +1,13 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+
+using Ruler.Shared.Models;
+
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -11,192 +18,45 @@ namespace Ruler.Shared.Services
 {
     public static class SecurityService
     {
-        private static string _activePublicKeyXml;
-        private static string _masterPublicKeyXml;
+        // Embedded XML public keys replacing certificate subject lookups[cite: 6]
+        private const string ActivePublicKeyXml = "<RSAKeyValue><Modulus>...</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+        private const string MasterPublicKeyXml = "<RSAKeyValue><Modulus>...</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
         /// <summary>
-        /// Initializes client-side public keys for update verification.
+        /// Verifies a raw byte array against a base64-encoded RSA signature using embedded XML public keys.
         /// </summary>
-        public static void Initialize(string activePublicKeyXml, string masterPublicKeyXml)
+        public static bool VerifyData(byte[] dataBytes, string base64Signature)
         {
-            _activePublicKeyXml = activePublicKeyXml;
-            _masterPublicKeyXml = masterPublicKeyXml;
-        }
+            if (string.IsNullOrEmpty(base64Signature)) return false;
 
-        #region Tier 1: Master Certificate (Cold Storage PFX)
-
-        /// <summary>
-        /// Creates the 99-year Master Root certificate and saves it securely as a password-protected PFX file.
-        /// Run this once on a secure machine and store the file offline.
-        /// </summary>
-        public static void CreateAndSaveMasterCertificate(string subjectName, string password, string destinationFilePath)
-        {
-            using (RSA rsa = RSA.Create(4096)) // 4096-bit for maximum security
-            {
-                var request = new CertificateRequest(
-                    $"CN={subjectName}",
-                    rsa,
-                    HashAlgorithmName.SHA256,
-                    RSASignaturePadding.Pkcs1);
-
-                request.CertificateExtensions.Add(
-                    new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.KeyEncipherment, true));
-
-                DateTimeOffset start = DateTimeOffset.UtcNow.AddDays(-1);
-                DateTimeOffset end = start.AddYears(99);
-
-                using (X509Certificate2 cert = request.CreateSelfSigned(start, end))
-                {
-                    byte[] pfxBytes = cert.Export(X509ContentType.Pfx, password);
-                    File.WriteAllBytes(destinationFilePath, pfxBytes);
-                }
-            }
-        }
-
-        #endregion
-
-        #region Tier 2: Active Certificate (Updates & Release Files)
-
-        /// <summary>
-        /// Creates an Active signing certificate (e.g., 2-year lifespan) and installs it into the Windows Local Machine store.
-        /// Returns the thumbprint to be saved in Properties.Settings.
-        /// </summary>
-        public static string CreateAndStoreActiveCertificate(string subjectName)
-        {
-            using (RSA rsa = RSA.Create(2048))
-            {
-                var request = new CertificateRequest(
-                    $"CN={subjectName}",
-                    rsa,
-                    HashAlgorithmName.SHA256,
-                    RSASignaturePadding.Pkcs1);
-
-                request.CertificateExtensions.Add(
-                    new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, false));
-
-                DateTimeOffset start = DateTimeOffset.UtcNow.AddDays(-1);
-                DateTimeOffset end = start.AddYears(2);
-
-                using (X509Certificate2 cert = request.CreateSelfSigned(start, end))
-                {
-                    using (X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
-                    {
-                        store.Open(OpenFlags.ReadWrite);
-                        store.Add(cert);
-                    }
-                    return cert.Thumbprint;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Retrieves the Active certificate from the Windows store using its thumbprint and signs a release file.
-        /// </summary>
-        public static string SignFileWithActiveCert(string filePath, string thumbprint)
-        {
-            if (!File.Exists(filePath)) throw new FileNotFoundException("File to sign not found.", filePath);
-
-            string cleanThumb = thumbprint?.Replace(" ", "").ToUpper();
-            using (var store = new X509Store(StoreName.My, StoreLocation.LocalMachine))
-            {
-                store.Open(OpenFlags.ReadOnly);
-                var certs = store.Certificates.Find(X509FindType.FindByThumbprint, cleanThumb, validOnly: false);
-
-                if (certs.Count == 0) throw new Exception("Active signing certificate not found in LocalMachine store.");
-
-                using (var rsa = certs[0].GetRSAPrivateKey())
-                {
-                    if (rsa == null) throw new CryptographicException("Private key unavailable for active certificate.");
-
-                    byte[] fileData = File.ReadAllBytes(filePath);
-                    byte[] signature = rsa.SignData(fileData, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-                    return Convert.ToBase64String(signature);
-                }
-            }
-        }
-
-        #endregion
-
-        #region Tier 3: Local Certificate (App Data / List of Rulers)
-
-        /// <summary>
-        /// Creates a local certificate stored in the CurrentUser store specifically for signing local application data.
-        /// Returns the thumbprint (which can be saved in local settings/config).
-        /// </summary>
-        public static string CreateAndStoreLocalCertificate(string subjectName)
-        {
-            using (RSA rsa = RSA.Create(2048))
-            {
-                var request = new CertificateRequest(
-                    $"CN={subjectName}",
-                    rsa,
-                    HashAlgorithmName.SHA256,
-                    RSASignaturePadding.Pkcs1);
-
-                request.CertificateExtensions.Add(
-                    new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, false));
-
-                DateTimeOffset start = DateTimeOffset.UtcNow.AddDays(-1);
-                DateTimeOffset end = start.AddYears(5);
-
-                using (X509Certificate2 cert = request.CreateSelfSigned(start, end))
-                {
-                    using (X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
-                    {
-                        store.Open(OpenFlags.ReadWrite);
-                        store.Add(cert);
-                    }
-                    return cert.Thumbprint;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Signs local app data (such as your serialized list of rulers) using the local user certificate.
-        /// </summary>
-        public static string SignAppData(string jsonData, string localCertThumbprint)
-        {
-            string cleanThumb = localCertThumbprint?.Replace(" ", "").ToUpper();
-            using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
-            {
-                store.Open(OpenFlags.ReadOnly);
-                var certs = store.Certificates.Find(X509FindType.FindByThumbprint, cleanThumb, validOnly: false);
-
-                if (certs.Count == 0) throw new Exception("Local app data certificate not found in CurrentUser store.");
-
-                using (var rsa = certs[0].GetRSAPrivateKey())
-                {
-                    if (rsa == null) throw new CryptographicException("Private key unavailable for local app data certificate.");
-
-                    byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData);
-                    byte[] signature = rsa.SignData(dataBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-                    return Convert.ToBase64String(signature);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Verifies local app data (such as your list of rulers) against tampering using the local certificate.
-        /// </summary>
-        public static bool VerifyAppData(string jsonData, string signatureBase64, string localCertThumbprint)
-        {
             try
             {
-                string cleanThumb = localCertThumbprint?.Replace(" ", "").ToUpper();
-                using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                byte[] signatureBytes = Convert.FromBase64String(base64Signature);
+                using (var rsa = RSA.Create())
                 {
-                    store.Open(OpenFlags.ReadOnly);
-                    var certs = store.Certificates.Find(X509FindType.FindByThumbprint, cleanThumb, validOnly: false);
-
-                    if (certs.Count == 0) return false;
-
-                    using (var rsa = certs[0].GetRSAPublicKey())
+                    // 1. Try verifying with the Active public key first
+                    try
                     {
-                        if (rsa == null) return false;
+                        rsa.FromXmlString(ActivePublicKeyXml);
+                        if (rsa.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
+                        {
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                        // Active key parsing or verification failed, proceed to fallback
+                    }
 
-                        byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData);
-                        byte[] sigBytes = Convert.FromBase64String(signatureBase64);
-                        return rsa.VerifyData(dataBytes, sigBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                    // 2. Fall back to the Master public key
+                    try
+                    {
+                        rsa.FromXmlString(MasterPublicKeyXml);
+                        return rsa.VerifyData(dataBytes, signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                    }
+                    catch
+                    {
+                        return false;
                     }
                 }
             }
@@ -206,36 +66,241 @@ namespace Ruler.Shared.Services
             }
         }
 
-        #endregion
-
-        #region Client Verification Logic (Active & Master Fallback for Updates)
-
-        public static bool VerifyFileTrust(string filePath, string signatureBase64)
+        /// <summary>
+        /// Computes the SHA-256 hash of a file and matches it against the expected hash string[cite: 6].
+        /// </summary>
+        public static bool VerifyFileHash(string filePath, string expectedHash)
         {
             if (!File.Exists(filePath)) return false;
-            byte[] fileData = File.ReadAllBytes(filePath);
 
-            if (VerifyRaw(fileData, signatureBase64, _activePublicKeyXml)) return true;
-            return VerifyRaw(fileData, signatureBase64, _masterPublicKeyXml);
+            try
+            {
+                using (var sha256 = SHA256.Create())
+                using (var stream = File.OpenRead(filePath))
+                {
+                    byte[] hashBytes = sha256.ComputeHash(stream);
+                    string actualHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                    return string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
-        private static bool VerifyRaw(byte[] data, string signature, string keyXml)
+        /// <summary>
+        /// Verifies an individual file's hash and its cryptographic signature[cite: 1, 6].
+        /// </summary>
+        public static bool VerifyFileSignature(string filePath, FileSignature fileSig)
+        {
+            if (fileSig == null || !File.Exists(filePath)) return false;
+
+            // 1. Verify file hash matches manifest record
+            if (!VerifyFileHash(filePath, fileSig.Hash))
+            {
+                return false;
+            }
+
+            // 2. Verify file signature bytes[cite: 1]
+            byte[] fileBytes = File.ReadAllBytes(filePath);
+            return VerifyData(fileBytes, fileSig.Signature);
+        }
+
+        /// <summary>
+        /// Verifies the detached manifest signature, package-level zip signature, and all individual inner file signatures.
+        /// If valid, deploys the new updater, launches it to update the running WPF application, and exits[cite: 6].
+        /// </summary>
+        public static bool VerifyAndApplyUpdatePackage(string packageDirectory, string targetInstallDirectory)
+        {
+            string manifestPath = Path.Combine(packageDirectory, UpdateConstants.ManifestFileName);
+            string sigPath = Path.Combine(packageDirectory, UpdateConstants.ManifestSigFileName);
+            string zipPath = Path.Combine(packageDirectory, UpdateConstants.ZipFileName);
+
+            void CleanupFailedPackage()
+            {
+                DeleteFileIfExists(manifestPath);
+                DeleteFileIfExists(sigPath);
+                DeleteFileIfExists(zipPath);
+            }
+
+            if (!File.Exists(manifestPath) || !File.Exists(sigPath) || !File.Exists(zipPath))
+            {
+                return false;
+            }
+
+            // 1. Verify detached manifest.json.sig
+            string manifestJson = File.ReadAllText(manifestPath);
+            string manifestSig = File.ReadAllText(sigPath);
+            byte[] manifestBytes = Encoding.UTF8.GetBytes(manifestJson);
+
+            if (!VerifyData(manifestBytes, manifestSig))
+            {
+                CleanupFailedPackage();
+                return false; // Manifest has been tampered with
+            }
+
+            // 2. Deserialize UpdateManifest
+            UpdateManifest manifest = JsonConvert.DeserializeObject<UpdateManifest>(manifestJson);
+            if (manifest == null) return false;
+
+            // 3. Verify overall Zip package signature
+            byte[] zipBytes = File.ReadAllBytes(zipPath);
+            if (!VerifyData(zipBytes, manifest.ZipSignature))
+            {
+                CleanupFailedPackage();
+                PurgeTempUpdateZips();
+                return false;
+            }
+
+            // 4. Extract zip to a temporary directory so we can inspect and verify inner files
+            string tempExtractPath = Path.Combine(packageDirectory, "temp_extracted_" + Guid.NewGuid().ToString());
+
+            try
+            {
+                Directory.CreateDirectory(tempExtractPath);
+                ZipFile.ExtractToDirectory(zipPath, tempExtractPath);
+
+                string fullExePath = Process.GetCurrentProcess().MainModule.FileName;
+                string currentExeName = Path.GetFileName(fullExePath);
+
+                string sourceUpdaterPath = string.Empty;
+                string sourceUpdaterConfigPath = string.Empty;
+                string sourceWpfPath = string.Empty;
+                string sourceWpfConfigPath = string.Empty;
+
+                // 5. Verify individual file signatures inside the extracted contents
+                foreach (var fileSig in manifest.Files)
+                {
+                    string targetFilePath = Path.Combine(tempExtractPath, fileSig.FileName);
+                    if (!VerifyFileSignature(targetFilePath, fileSig))
+                    {
+                        CleanupFailedPackage();
+                        DeleteFolderIfExists(tempExtractPath);
+                        PurgeTempUpdateZips();
+                        return false;
+                    }
+
+                    // Capture paths for deployment
+                    if (fileSig.FileName.Equals("ruler.updater.exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        sourceUpdaterPath = targetFilePath;
+                    }
+                    if (fileSig.FileName.Equals("ruler.updater.exe.config", StringComparison.OrdinalIgnoreCase))
+                    {
+                        sourceUpdaterConfigPath = targetFilePath;
+                    }
+                    if (fileSig.FileName.Equals(currentExeName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        sourceWpfPath = targetFilePath;
+                    }
+                    if (fileSig.FileName.Equals(currentExeName + ".config", StringComparison.OrdinalIgnoreCase))
+                    {
+                        sourceWpfConfigPath = targetFilePath;
+                    }
+                }
+
+                // Ensure required files were present in the verified manifest
+                if (string.IsNullOrEmpty(sourceUpdaterPath) || string.IsNullOrEmpty(sourceWpfPath) || string.IsNullOrEmpty(sourceUpdaterConfigPath)|| string.IsNullOrEmpty(sourceWpfConfigPath)) 
+                {
+                    return false;
+                }
+
+                // 6. Stage the new updater (since the updater isn't currently running, we can copy it directly)
+                Directory.CreateDirectory(targetInstallDirectory);
+                string targetUpdaterPath = Path.Combine(targetInstallDirectory, "ruler.updater.exe");
+                string targetUpdaterConfigPath = Path.Combine(targetInstallDirectory, "ruler.updater.exe.config");
+
+                File.Copy(sourceUpdaterPath, targetUpdaterPath, overwrite: true);
+                File.Copy(sourceUpdaterConfigPath, targetUpdaterConfigPath, overwrite: true);
+
+                // 7. Verify the updater was copied successfully and check size
+                if (!File.Exists(targetUpdaterPath))
+                {
+                    return false;
+                }
+
+                FileInfo sourceInfo = new FileInfo(sourceUpdaterPath);
+                FileInfo targetInfo = new FileInfo(targetUpdaterPath);
+                if (sourceInfo.Length != targetInfo.Length)
+                {
+                    return false;
+                }
+
+                // 8. Prepare arguments and launch the updater to replace the running WPF app
+                int currentProcessId = Process.GetCurrentProcess().Id;
+                string arguments = $"\"{sourceWpfPath}\" \"{sourceWpfConfigPath}\" \"{targetInstallDirectory}\"\"{currentExeName}\" ";
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = targetUpdaterPath,
+                    Arguments = arguments,
+                    UseShellExecute = true
+                });
+
+                // 9. Immediately shut down the main app to release file locks
+                Environment.Exit(0);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                // Clean up the temporary extraction folder (if exit didn't occur first)
+                CleanupFailedPackage();
+                DeleteFolderIfExists(tempExtractPath);
+                PurgeTempUpdateZips();
+            }
+        }
+
+        private static void DeleteFileIfExists(string path)
+        {
+            if (File.Exists(path))
+            {
+                try { File.Delete(path); } catch { }
+            }
+        }
+
+        private static void DeleteFolderIfExists(string path)
+        {
+            if (Directory.Exists(path))
+            {
+                try
+                {
+                    Directory.Delete(path, true);
+                }
+                catch (Exception)
+                {
+                }
+            }
+        }
+        private static void PurgeTempUpdateZips()
         {
             try
             {
-                if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(keyXml))
-                    return false;
-
-                using (var rsa = new RSACryptoServiceProvider())
+                string tempPath = Path.GetTempPath();
+                // Use the shared constant pattern or base name for cleanup
+                string searchPattern = $"*{UpdateConstants.ZipFileName}";
+                string[] leftoverZips = Directory.GetFiles(tempPath, searchPattern);
+                foreach (string zip in leftoverZips)
                 {
-                    rsa.FromXmlString(keyXml);
-                    byte[] sigBytes = Convert.FromBase64String(signature);
-                    return rsa.VerifyData(data, CryptoConfig.MapNameToOID("SHA256"), sigBytes);
+                    try
+                    {
+                        File.Delete(zip);
+                    }
+                    catch
+                    {
+                        // Suppress individual file deletion locks if open elsewhere 
+                    }
                 }
             }
-            catch { return false; }
+            catch
+            {
+                // Suppress errors during global temp scan
+            }
         }
-
-        #endregion
     }
 }
+
