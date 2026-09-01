@@ -19,8 +19,8 @@ namespace Ruler.Shared.Services
     public static class SecurityService
     {
         // Embedded XML public keys replacing certificate subject lookups[cite: 6]
-        private const string ActivePublicKeyXml = "<RSAKeyValue><Modulus>...</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
-        private const string MasterPublicKeyXml = "<RSAKeyValue><Modulus>...</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+        private const string ActivePublicKeyXml = "<RSAKeyValue><Modulus>zI79Gy0RaoMIYuQ62WGG/GDHlyTDwZjeLhSRaBEkelGMj152jApWkCnl+BDQQtEIXGOcxivoOqKe1+EpDEQSUmTmfrlfDJjmOWGbEUVEzZbU7RNT3GaAOWpEQgRFkk+n7diH49HekaZxNp+YAE+5Rllyu8WzEcFwHZtrpTkEd0U=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+        private const string MasterPublicKeyXml = "<RSAKeyValue><Modulus>uOnRFfY1dstLSAczCS+Ecycw2c52Ks0i6u9CqncmIWYQoD0dqk+oUMJEvnwfcwycFxyYnVlh1BUVUH2PQPIFWhDHDiJvfgVNdHAtoff/UErvd1tH747oBFm8QmDQ3FHj5zhzdNC2YyJjNq8hzYV7OvqvD18HxJfDtDU+qaGtHek=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
         /// <summary>
         /// Verifies a raw byte array against a base64-encoded RSA signature using embedded XML public keys.
@@ -45,6 +45,7 @@ namespace Ruler.Shared.Services
                     }
                     catch
                     {
+                     
                         // Active key parsing or verification failed, proceed to fallback
                     }
 
