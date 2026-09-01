@@ -41,6 +41,8 @@ namespace Ruler.Wpf.Windows
         private UpdatePackageInfo _cachedUpdatePackage;
         private MenuItemModel _updateMenuItem;
         private bool _isUpdateAvailable = false;
+        private string _owner = "IsaacMorris1980";
+        private string _repo = "ruler";
         public bool ShowToolTips
         {
             get => _showToolTips;
@@ -836,7 +838,7 @@ namespace Ruler.Wpf.Windows
         {
             try
             {
-                _cachedUpdatePackage = await UpdateService.GetLatestGitHubAssetUrlsAsync("your-github-owner", "your-repo-name");
+                _cachedUpdatePackage = await UpdateService.GetLatestGitHubAssetUrlsAsync(_owner, _repo);
 
                 string currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
                 var (available, latestVersion) = await UpdateService.CheckForUpdateAsync(_cachedUpdatePackage.ManifestUrl, currentVersion);
@@ -862,7 +864,7 @@ namespace Ruler.Wpf.Windows
 
                 try
                 {
-                    _cachedUpdatePackage = await UpdateService.GetLatestGitHubAssetUrlsAsync("your-github-owner", "your-repo-name");
+                    _cachedUpdatePackage = await UpdateService.GetLatestGitHubAssetUrlsAsync(_owner, _repo);
                     string currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
                     var (available, latestVersion) = await UpdateService.CheckForUpdateAsync(_cachedUpdatePackage.ManifestUrl, currentVersion);
 
