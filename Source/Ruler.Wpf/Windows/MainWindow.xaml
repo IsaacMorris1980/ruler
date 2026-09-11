@@ -5,26 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Ruler.Wpf.Windows"
         xmlns:menu ="clr-namespace:Ruler.Shared.Models;assembly=Ruler.Shared"
-         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+
         mc:Ignorable="d"
         Title="Ruler Window"
        WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
         SizeChanged="Window_SizeChanged"
-        MouseDoubleClick="Window_MouseDoubleClick">
-    <!--<Window.Resources>
-        <HierarchicalDataTemplate DataType="{x:Type menu:MenuItemModel}" 
-                                  ItemsSource="{Binding Items}">
-            <MenuItem Header="{Binding Header}" 
-                      IsCheckable="{Binding IsCheckable}"
-                      IsChecked="{Binding IsChecked}"
-                      Command="{Binding Command}"
-                      InputGestureText="{Binding InputGestureText}"
-                      CommandParameter="{Binding}"/>
-        </HierarchicalDataTemplate>
-       
-    </Window.Resources>-->
+        MouseDoubleClick="Window_MouseDoubleClick"
+
+       Height="{Binding  RulerData.Height}" Width="{Binding RulerData.Width}" >
     <Window.ContextMenu>
         <ContextMenu ItemsSource="{Binding PlacementTarget.DataContext.MenuItems, RelativeSource={RelativeSource Self}}">
             <ContextMenu.ItemContainerStyle>
@@ -64,13 +56,14 @@
     </Window.InputBindings>
 
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="0"
-                            ResizeBorderThickness="5"
-                            GlassFrameThickness="0"
-                            UseAeroCaptionButtons="False" />
+        <shell:WindowChrome ResizeBorderThickness="6" 
+                         CaptionHeight="0" 
+                         UseAeroCaptionButtons="False" 
+                         GlassFrameThickness="0"/>
     </shell:WindowChrome.WindowChrome>
-
     <Grid>
-     
+       <!-- Enable native window resizing borders for borderless windows -->
+   
+
     </Grid>
 </Window>
