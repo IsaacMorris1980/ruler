@@ -18,13 +18,10 @@ namespace Ruler.Shared.Services
 {
     public static class SecurityService
     {
-        // Embedded XML public keys replacing certificate subject lookups[cite: 6]
-        private const string ActivePublicKeyXml = "<RSAKeyValue><Modulus>zI79Gy0RaoMIYuQ62WGG/GDHlyTDwZjeLhSRaBEkelGMj152jApWkCnl+BDQQtEIXGOcxivoOqKe1+EpDEQSUmTmfrlfDJjmOWGbEUVEzZbU7RNT3GaAOWpEQgRFkk+n7diH49HekaZxNp+YAE+5Rllyu8WzEcFwHZtrpTkEd0U=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
-        private const string MasterPublicKeyXml = "<RSAKeyValue><Modulus>uOnRFfY1dstLSAczCS+Ecycw2c52Ks0i6u9CqncmIWYQoD0dqk+oUMJEvnwfcwycFxyYnVlh1BUVUH2PQPIFWhDHDiJvfgVNdHAtoff/UErvd1tH747oBFm8QmDQ3FHj5zhzdNC2YyJjNq8hzYV7OvqvD18HxJfDtDU+qaGtHek=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+        private const string ActivePublicKeyXml= "<RSAKeyValue><Modulus>wY2zbyvfNbH3kY0EH0arMuveaPuQst4Kta5otX2UZFTAbeILwEumMSM6vJ7Tpa8uC1BB4Vh5zdIF4MsPZfVWFgoyWEa/NHPobcgUw8CUBCj1aQ/UDoumIgP0VHHgcwfy0NmiS7ANSpU0xxqQlIm5d6JeR769FZ1kG881GwosITk=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
-        /// <summary>
-        /// Verifies a raw byte array against a base64-encoded RSA signature using embedded XML public keys.
-        /// </summary>
+        private const string MasterPublicKeyXml = "<RSAKeyValue><Modulus>3xkaPvlFt7UlsQzCWV5KfrGf+KtaxGaeJt+pINSMtfnPFmZ0r1LJJxK8kegGXTJB3ebR0Ppg5ssZ42e9oWGUNzk6UFsKHD1SnIDVIu/3G4MLqRMwoTPJ4dmVtd7KzvKYrw5AkTquKzOzDgqAjtd3CbmHlimJdxFyiPsbMZ0JQHk=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+
         public static bool VerifyData(byte[] dataBytes, string base64Signature)
         {
             if (string.IsNullOrEmpty(base64Signature)) return false;
@@ -34,7 +31,6 @@ namespace Ruler.Shared.Services
                 byte[] signatureBytes = Convert.FromBase64String(base64Signature);
                 using (var rsa = RSA.Create())
                 {
-                    // 1. Try verifying with the Active public key first
                     try
                     {
                         rsa.FromXmlString(ActivePublicKeyXml);
@@ -45,11 +41,9 @@ namespace Ruler.Shared.Services
                     }
                     catch
                     {
-                     
-                        // Active key parsing or verification failed, proceed to fallback
+                        // Fall through
                     }
 
-                    // 2. Fall back to the Master public key
                     try
                     {
                         rsa.FromXmlString(MasterPublicKeyXml);
@@ -67,9 +61,6 @@ namespace Ruler.Shared.Services
             }
         }
 
-        /// <summary>
-        /// Computes the SHA-256 hash of a file and matches it against the expected hash string[cite: 6].
-        /// </summary>
         public static bool VerifyFileHash(string filePath, string expectedHash)
         {
             if (!File.Exists(filePath)) return false;
@@ -90,29 +81,20 @@ namespace Ruler.Shared.Services
             }
         }
 
-        /// <summary>
-        /// Verifies an individual file's hash and its cryptographic signature[cite: 1, 6].
-        /// </summary>
         public static bool VerifyFileSignature(string filePath, FileSignature fileSig)
         {
             if (fileSig == null || !File.Exists(filePath)) return false;
 
-            // 1. Verify file hash matches manifest record
             if (!VerifyFileHash(filePath, fileSig.Hash))
             {
                 return false;
             }
 
-            // 2. Verify file signature bytes[cite: 1]
             byte[] fileBytes = File.ReadAllBytes(filePath);
             return VerifyData(fileBytes, fileSig.Signature);
         }
 
-        /// <summary>
-        /// Verifies the detached manifest signature, package-level zip signature, and all individual inner file signatures.
-        /// If valid, deploys the new updater, launches it to update the running WPF application, and exits[cite: 6].
-        /// </summary>
-        public static bool VerifyAndApplyUpdatePackage(string packageDirectory, string targetInstallDirectory)
+        public static string VerifyAndApplyUpdatePackage(string packageDirectory, string targetInstallDirectory)
         {
             string manifestPath = Path.Combine(packageDirectory, UpdateConstants.ManifestFileName);
             string sigPath = Path.Combine(packageDirectory, UpdateConstants.ManifestSigFileName);
@@ -127,34 +109,34 @@ namespace Ruler.Shared.Services
 
             if (!File.Exists(manifestPath) || !File.Exists(sigPath) || !File.Exists(zipPath))
             {
-                return false;
+                return "Manifest, Signature, or Zip file is missing";
             }
 
-            // 1. Verify detached manifest.json.sig
-            string manifestJson = File.ReadAllText(manifestPath);
-            string manifestSig = File.ReadAllText(sigPath);
-            byte[] manifestBytes = Encoding.UTF8.GetBytes(manifestJson);
+            // 1. Read raw manifest bytes directly to preserve exact line-ending layout for signature verification[cite: 3]
+            byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+            string manifestSig = File.ReadAllText(sigPath).Trim();
 
             if (!VerifyData(manifestBytes, manifestSig))
             {
                 CleanupFailedPackage();
-                return false; // Manifest has been tampered with
+                return "Manifest has been tampered with";
             }
 
-            // 2. Deserialize UpdateManifest
+            // 2. Deserialize UpdateManifest[cite: 3]
+            string manifestJson = Encoding.UTF8.GetString(manifestBytes);
             UpdateManifest manifest = JsonConvert.DeserializeObject<UpdateManifest>(manifestJson);
-            if (manifest == null) return false;
+            if (manifest == null) return "Failed to deserialize update manifest";
 
-            // 3. Verify overall Zip package signature
+            // 3. Verify overall Zip package signature[cite: 3]
             byte[] zipBytes = File.ReadAllBytes(zipPath);
             if (!VerifyData(zipBytes, manifest.ZipSignature))
             {
                 CleanupFailedPackage();
                 PurgeTempUpdateZips();
-                return false;
+                return "Zip package signature is invalid";
             }
 
-            // 4. Extract zip to a temporary directory so we can inspect and verify inner files
+            // 4. Extract zip to temporary directory for inner file checks[cite: 3]
             string tempExtractPath = Path.Combine(packageDirectory, "temp_extracted_" + Guid.NewGuid().ToString());
 
             try
@@ -170,7 +152,7 @@ namespace Ruler.Shared.Services
                 string sourceWpfPath = string.Empty;
                 string sourceWpfConfigPath = string.Empty;
 
-                // 5. Verify individual file signatures inside the extracted contents
+                // 5. Verify individual file signatures[cite: 3]
                 foreach (var fileSig in manifest.Files)
                 {
                     string targetFilePath = Path.Combine(tempExtractPath, fileSig.FileName);
@@ -179,10 +161,9 @@ namespace Ruler.Shared.Services
                         CleanupFailedPackage();
                         DeleteFolderIfExists(tempExtractPath);
                         PurgeTempUpdateZips();
-                        return false;
+                        return $"{fileSig.FileName} file in the package have been tampered with";
                     }
 
-                    // Capture paths for deployment
                     if (fileSig.FileName.Equals("ruler.updater.exe", StringComparison.OrdinalIgnoreCase))
                     {
                         sourceUpdaterPath = targetFilePath;
@@ -201,13 +182,12 @@ namespace Ruler.Shared.Services
                     }
                 }
 
-                // Ensure required files were present in the verified manifest
-                if (string.IsNullOrEmpty(sourceUpdaterPath) || string.IsNullOrEmpty(sourceWpfPath) || string.IsNullOrEmpty(sourceUpdaterConfigPath)|| string.IsNullOrEmpty(sourceWpfConfigPath)) 
+                if (string.IsNullOrEmpty(sourceUpdaterPath) || string.IsNullOrEmpty(sourceWpfPath) || string.IsNullOrEmpty(sourceUpdaterConfigPath) || string.IsNullOrEmpty(sourceWpfConfigPath))
                 {
-                    return false;
+                    return "Required files are missing from the update package";
                 }
 
-                // 6. Stage the new updater (since the updater isn't currently running, we can copy it directly)
+                // 6. Stage the new updater[cite: 3]
                 Directory.CreateDirectory(targetInstallDirectory);
                 string targetUpdaterPath = Path.Combine(targetInstallDirectory, "ruler.updater.exe");
                 string targetUpdaterConfigPath = Path.Combine(targetInstallDirectory, "ruler.updater.exe.config");
@@ -215,22 +195,20 @@ namespace Ruler.Shared.Services
                 File.Copy(sourceUpdaterPath, targetUpdaterPath, overwrite: true);
                 File.Copy(sourceUpdaterConfigPath, targetUpdaterConfigPath, overwrite: true);
 
-                // 7. Verify the updater was copied successfully and check size
                 if (!File.Exists(targetUpdaterPath))
                 {
-                    return false;
+                    return "Failed to copy updater executable";
                 }
 
                 FileInfo sourceInfo = new FileInfo(sourceUpdaterPath);
                 FileInfo targetInfo = new FileInfo(targetUpdaterPath);
                 if (sourceInfo.Length != targetInfo.Length)
                 {
-                    return false;
+                    return "Failed to copy updater executable";
                 }
 
-                // 8. Prepare arguments and launch the updater to replace the running WPF app
-                int currentProcessId = Process.GetCurrentProcess().Id;
-                string arguments = $"\"{sourceWpfPath}\" \"{sourceWpfConfigPath}\" \"{targetInstallDirectory}\"\"{currentExeName}\" ";
+                // 7. Launch updater and exit[cite: 3]
+                string arguments = $"\"{sourceWpfPath}\" \"{sourceWpfConfigPath}\" \"{targetInstallDirectory}\" \"{currentExeName}\"";
 
                 Process.Start(new ProcessStartInfo
                 {
@@ -239,17 +217,15 @@ namespace Ruler.Shared.Services
                     UseShellExecute = true
                 });
 
-                // 9. Immediately shut down the main app to release file locks
                 Environment.Exit(0);
-                return true;
+                return "Update applied successfully";
             }
             catch
             {
-                return false;
+                return "An error occurred while updating the application";
             }
             finally
             {
-                // Clean up the temporary extraction folder (if exit didn't occur first)
                 CleanupFailedPackage();
                 DeleteFolderIfExists(tempExtractPath);
                 PurgeTempUpdateZips();
@@ -272,35 +248,23 @@ namespace Ruler.Shared.Services
                 {
                     Directory.Delete(path, true);
                 }
-                catch (Exception)
-                {
-                }
+                catch { }
             }
         }
+
         private static void PurgeTempUpdateZips()
         {
             try
             {
                 string tempPath = Path.GetTempPath();
-                // Use the shared constant pattern or base name for cleanup
                 string searchPattern = $"*{UpdateConstants.ZipFileName}";
                 string[] leftoverZips = Directory.GetFiles(tempPath, searchPattern);
                 foreach (string zip in leftoverZips)
                 {
-                    try
-                    {
-                        File.Delete(zip);
-                    }
-                    catch
-                    {
-                        // Suppress individual file deletion locks if open elsewhere 
-                    }
+                    try { File.Delete(zip); } catch { }
                 }
             }
-            catch
-            {
-                // Suppress errors during global temp scan
-            }
+            catch { }
         }
     }
 }

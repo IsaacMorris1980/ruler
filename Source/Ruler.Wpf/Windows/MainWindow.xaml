@@ -5,12 +5,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Ruler.Wpf.Windows"
         xmlns:menu ="clr-namespace:Ruler.Shared.Models;assembly=Ruler.Shared"
+         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="Ruler Window"
        WindowStyle="None"
         AllowsTransparency="True"
-        Background="Transparent">
-    <Window.Resources>
+        Background="Transparent"
+        SizeChanged="Window_SizeChanged"
+        MouseDoubleClick="Window_MouseDoubleClick">
+    <!--<Window.Resources>
         <HierarchicalDataTemplate DataType="{x:Type menu:MenuItemModel}" 
                                   ItemsSource="{Binding Items}">
             <MenuItem Header="{Binding Header}" 
@@ -21,9 +24,21 @@
                       CommandParameter="{Binding}"/>
         </HierarchicalDataTemplate>
        
-    </Window.Resources>
+    </Window.Resources>-->
     <Window.ContextMenu>
-        <ContextMenu ItemsSource="{Binding MenuItems}" />
+        <ContextMenu ItemsSource="{Binding PlacementTarget.DataContext.MenuItems, RelativeSource={RelativeSource Self}}">
+            <ContextMenu.ItemContainerStyle>
+                <Style TargetType="MenuItem">
+                    <Setter Property="Header" Value="{Binding Header}" />
+                    <Setter Property="IsCheckable" Value="{Binding IsCheckable}" />
+                    <Setter Property="IsChecked" Value="{Binding IsChecked}" />
+                    <Setter Property="Command" Value="{Binding Command}" />
+                    <Setter Property="InputGestureText" Value="{Binding InputGestureText}" />
+                    <Setter Property="CommandParameter" Value="{Binding}" />
+                    <Setter Property="ItemsSource" Value="{Binding Items}" />
+                </Style>
+            </ContextMenu.ItemContainerStyle>
+        </ContextMenu>
     </Window.ContextMenu>
     <Window.InputBindings>
         <KeyBinding Key="O" Command="{Binding ToggleOrientationCommand}" />
@@ -45,8 +60,17 @@
         <KeyBinding Key="PageDown" Modifiers="Shift" Command="{Binding SetOpacityCommand}" CommandParameter="-5" />
         <KeyBinding Key="PageUp" Modifiers="Control" Command="{Binding MaxOpacityCommand}" />
         <KeyBinding Key="PageDown" Modifiers="Control" Command="{Binding MinOpacityCommand}" />
+        <KeyBinding Key="U" Command="{Binding CheckOrApplyUpdateCommand}" />
     </Window.InputBindings>
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            ResizeBorderThickness="5"
+                            GlassFrameThickness="0"
+                            UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
+
     <Grid>
-        
+     
     </Grid>
 </Window>

@@ -73,9 +73,10 @@ namespace Ruler.Wpf
             {
                 var copy = new RulerInfo();
                 _rulerFactory.CopyValues(newInfo, copy);
+                copy.ID = Guid.NewGuid(); // Ensure a new unique ID
                 ShowRuler(copy);
             };
-
+            _registry.Register(ruler);
             ruler.Show();
         }
 

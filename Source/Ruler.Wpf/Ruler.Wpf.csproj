@@ -31,7 +31,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>embedded</DebugType>
-	<PathMap>$(MSBuildThisFileDirectory)=src/</PathMap>
+    <PathMap>$(MSBuildThisFileDirectory)=src/</PathMap>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
@@ -113,6 +113,9 @@
     <Compile Include="Windows\ShowShortcutsWindow.xaml.cs">
       <DependentUpon>ShowShortcutsWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Windows\UpdateScreen.xaml.cs">
+      <DependentUpon>UpdateScreen.xaml</DependentUpon>
+    </Compile>
     <Page Include="ShortcutWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -130,6 +133,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Windows\ShowShortcutsWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\UpdateScreen.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

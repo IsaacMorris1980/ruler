@@ -21,15 +21,10 @@ namespace Ruler.Shared.Services
     {
         private static readonly HttpClient HttpClient = new HttpClient();
 
-        /// <summary>
-        /// Queries the GitHub Releases API to dynamically retrieve download URLs 
-        /// for the manifest, signature file, and zip package using GitHubRelease and GitHubAsset models.
-        /// </summary>
         public static async Task<UpdatePackageInfo> GetLatestGitHubAssetUrlsAsync(string repoOwner, string repoName)
         {
             string apiUrl = $"https://api.github.com/repos/{repoOwner}/{repoName}/releases/latest";
 
-            // GitHub API requires a custom User-Agent header or it will return a 403 Forbidden response
             if (!HttpClient.DefaultRequestHeaders.Contains("User-Agent"))
             {
                 HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("RulerUpdaterClient");
@@ -43,36 +38,31 @@ namespace Ruler.Shared.Services
                 throw new InvalidOperationException("Could not retrieve GitHub release assets.");
             }
 
-            string manifestUrl = null;
-            string sigUrl = null;
-            string zipUrl = null;
             UpdatePackageInfo pack = new UpdatePackageInfo();
             foreach (var asset in release.Assets)
             {
                 if (asset.Name.Equals("manifest.json", StringComparison.OrdinalIgnoreCase))
                 {
-                    pack.ManifestUrl = asset.DownloadUrl; 
+                    pack.ManifestUrl = asset.DownloadUrl;
                 }
                 else if (asset.Name.Equals("manifest.json.sig", StringComparison.OrdinalIgnoreCase))
                 {
-                    pack.SigUrl = asset.DownloadUrl; 
+                    pack.SigUrl = asset.DownloadUrl;
                 }
                 else if (asset.Name.Equals("ruler.zip", StringComparison.OrdinalIgnoreCase))
                 {
-                    pack.ZipUrl = asset.DownloadUrl; 
+                    pack.ZipUrl = asset.DownloadUrl;
                 }
             }
 
-            if (string.IsNullOrEmpty(manifestUrl) || string.IsNullOrEmpty(sigUrl) || string.IsNullOrEmpty(zipUrl))
+            if (string.IsNullOrEmpty(pack.ManifestUrl) || string.IsNullOrEmpty(pack.SigUrl) || string.IsNullOrEmpty(pack.ZipUrl))
             {
                 throw new FileNotFoundException("One or more required update assets (manifest.json, sig, zip) were missing from the GitHub release.");
             }
 
             return pack;
         }
-        /// <summary>
-        /// Checks the remote manifest to see if a newer version is available compared to the current app version.
-        /// </summary>
+
         public static async Task<(bool UpdateAvailable, string LatestVersion)> CheckForUpdateAsync(string manifestUrl, string currentVersion)
         {
             try
@@ -101,11 +91,7 @@ namespace Ruler.Shared.Services
             return (false, null);
         }
 
-        /// <summary>
-        /// Downloads the update artifacts (manifest, detached signature, and zip package) 
-        /// and hands them off to SecurityService for cryptographic verification and execution.
-        /// </summary>
-        public static async Task DownloadAndApplyUpdateAsync(string manifestUrl, string sigUrl, string zipUrl, string targetAppDirectory)
+        public static async Task<string> DownloadAndApplyUpdateAsync(string manifestUrl, string sigUrl, string zipUrl, string targetAppDirectory)
         {
             try
             {
@@ -115,32 +101,33 @@ namespace Ruler.Shared.Services
                 string sigPath = Path.Combine(targetAppDirectory, UpdateConstants.ManifestSigFileName);
                 string zipPath = Path.Combine(targetAppDirectory, UpdateConstants.ZipFileName);
 
-                // 1. Download manifest.json
-                string manifestJson = await HttpClient.GetStringAsync(manifestUrl);
-                await Task.Run(() => File.WriteAllText(manifestPath, manifestJson));
+                // 1. Download manifest.json as raw bytes to prevent text translation line-ending shifts[cite: 2]
+                byte[] manifestBytes = await HttpClient.GetByteArrayAsync(manifestUrl);
+                await Task.Run(() => File.WriteAllBytes(manifestPath, manifestBytes));
 
-                // 2. Download manifest.json.sig (detached signature)
+                // 2. Download manifest.json.sig (detached signature)[cite: 2]
                 string manifestSig = await HttpClient.GetStringAsync(sigUrl);
                 await Task.Run(() => File.WriteAllText(sigPath, manifestSig));
 
-                // 3. Download ruler.zip package bytes
+                // 3. Download ruler.zip package bytes[cite: 2]
                 byte[] zipBytes = await HttpClient.GetByteArrayAsync(zipUrl);
                 await Task.Run(() => File.WriteAllBytes(zipPath, zipBytes));
 
-                // 4. Delegate verification, staging, and updater handoff to SecurityService
-                bool success = SecurityService.VerifyAndApplyUpdatePackage(targetAppDirectory, targetAppDirectory);
+                // 4. Delegate verification, staging, and updater handoff to SecurityService[cite: 2]
+                string success = SecurityService.VerifyAndApplyUpdatePackage(targetAppDirectory, targetAppDirectory);
 
-                if (!success)
+                if (success != "Update applied successfully")
                 {
-                    throw new System.Security.SecurityException("CRITICAL: Update package verification failed. Update rejected.");
+                    return $"Failed to apply update: {success}";
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Cleanup partial downloads if an exception occurs before verification takes over
+                Console.WriteLine(ex.ToString());
                 CleanupFailedDownloads(targetAppDirectory);
-                throw;
+                return $"Error during update process: {ex.Message}";
             }
+            return "Update applied successfully";
         }
 
         private static void CleanupFailedDownloads(string targetDir)

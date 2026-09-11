@@ -100,6 +100,7 @@ namespace Ruler.Wpf.Windows
             };
             PoplateCommands();
             PopulateMenu();
+            Loaded += async (s, e) => await CheckForUpdatesOnStartupAsync();
         }
         public void PoplateCommands()
         {
@@ -251,7 +252,11 @@ namespace Ruler.Wpf.Windows
                     UpdateSaveTypeMenuStates();
                 }
             });
-            CheckOrApplyUpdateCommand = new DelegateCommand(async _ => await HandleUpdateClickAsync());
+            CheckOrApplyUpdateCommand = new DelegateCommand( _ =>{
+               UpdateWindow updateWindow = new UpdateWindow();
+                updateWindow.ShowDialog();
+            }
+            );
            
 
             SetMagnficationScaleCommand = new DelegateCommand<object>(param =>
@@ -444,7 +449,7 @@ namespace Ruler.Wpf.Windows
             MenuItems.Add(_updateMenuItem);
             var magnificationMenu = MenuHelper.CreateRangeMenuItems(
     start: 1.5,
-    end: 10.0,
+    end: 5.0,
     step: 0.5,
     formatString: "{0:0.#}x Zoom", // {0:0.#} ensures clean formatting like "1.5x Zoom" or "2x Zoom"
     valueSelector: i => i,          // Value is already a double
@@ -852,6 +857,7 @@ namespace Ruler.Wpf.Windows
             catch
             {
                 // Fail silently during background checks
+                Console.WriteLine("failed update check during startup");
             }
         }
 
@@ -935,15 +941,15 @@ namespace Ruler.Wpf.Windows
             bool down = Keyboard.IsKeyDown(Key.Down);
             bool left = Keyboard.IsKeyDown(Key.Left);
             bool right = Keyboard.IsKeyDown(Key.Right);
-            if (isCtrl && e.Key == Key.U)
-            {
-                if (CheckOrApplyUpdateCommand.CanExecute(null))
-                {
-                    CheckOrApplyUpdateCommand.Execute(null);
-                    e.Handled = true;
-                    return;
-                }
-            }
+            //if (isCtrl && e.Key == Key.U)
+            //{
+            //    if (CheckOrApplyUpdateCommand.CanExecute(null))
+            //    {
+            //        CheckOrApplyUpdateCommand.Execute(null);
+            //        e.Handled = true;
+            //        return;
+            //    }
+            //}
 
             if (up && left) { dx = -1; dy = -1; }
             else if (up && right) { dx = 1; dy = -1; }
@@ -1030,6 +1036,25 @@ namespace Ruler.Wpf.Windows
         public void RefreshAll()
         {
             OnPropertyChanged(string.Empty);
+        }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // Ensure _rulerInfo is initialized before updating fields
+            if (_rulerInfo == null) return;
+
+            // Capture the new dimensions from the window's actual size
+            _rulerInfo.Width = (int)this.ActualWidth;
+            _rulerInfo.Height = (int)this.ActualHeight;
+
+            // Refresh tooltips and visual rendering to match the new size
+            InvalidateView();
+        }
+
+        private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            _rulerInfo.ToggleOrientation();
+            InvalidateView();
         }
     }
 }
