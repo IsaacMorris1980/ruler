@@ -116,34 +116,34 @@ namespace Ruler.Shared.Services
             if (!File.Exists(manifestPath) || !File.Exists(sigPath) || !File.Exists(zipPath))
             {
 
-                return "Manifest, Signature, or Zip file is missing";
+                return false;
             }
 
-            // 1. Read raw manifest bytes directly to preserve exact line-ending layout for signature verification[cite: 3]
+            // 1. Read raw manifest bytes directly to preserve exact line-ending layout for signature verification
             byte[] manifestBytes = File.ReadAllBytes(manifestPath);
-            string manifestSig = File.ReadAllText(sigPath).Trim()
+            string manifestSig = File.ReadAllText(sigPath).Trim();
 
             if (!VerifyData(manifestBytes, manifestSig))
             {
                 CleanupFailedPackage();
-                return "Manifest has been tampered with";
+                return false;
             }
 
-            // 2. Deserialize UpdateManifest[cite: 3]
+            // 2. Deserialize UpdateManifest
             string manifestJson = Encoding.UTF8.GetString(manifestBytes);
             UpdateManifest manifest = JsonConvert.DeserializeObject<UpdateManifest>(manifestJson);
-            if (manifest == null) return "Failed to deserialize update manifest";
+            if (manifest == null) return false;
 
-            // 3. Verify overall Zip package signature[cite: 3]
+            // 3. Verify overall Zip package signature
             byte[] zipBytes = File.ReadAllBytes(zipPath);
             if (!VerifyData(zipBytes, manifest.ZipSignature))
             {
                 CleanupFailedPackage();
                 PurgeTempUpdateZips();
-                return "Zip package signature is invalid";
+                return false;
             }
 
-            // 4. Extract zip to temporary directory for inner file checks[cite: 3]
+            // 4. Extract zip to temporary directory for inner file checks
             string tempExtractPath = Path.Combine(packageDirectory, "temp_extracted_" + Guid.NewGuid().ToString());
 
             try
@@ -158,7 +158,7 @@ namespace Ruler.Shared.Services
                 string sourceUpdaterConfigPath = string.Empty;
                 string sourceWpfPath = string.Empty;
                 string sourceWpfConfigPath = string.Empty;
-                // 5. Verify individual file signatures[cite: 3]
+                // 5. Verify individual file signatures
                 foreach (var fileSig in manifest.Files)
                 {
                     string targetFilePath = Path.Combine(tempExtractPath, fileSig.FileName);
@@ -167,7 +167,7 @@ namespace Ruler.Shared.Services
                         CleanupFailedPackage();
                         DeleteFolderIfExists(tempExtractPath);
                         PurgeTempUpdateZips();
-                        return $"{fileSig.FileName} file in the package have been tampered with";
+                        return false;
                     }
 
                     if (fileSig.FileName.Equals("ruler.updater.exe", StringComparison.OrdinalIgnoreCase))
@@ -192,10 +192,10 @@ namespace Ruler.Shared.Services
 
                 if (string.IsNullOrEmpty(sourceUpdaterPath) || string.IsNullOrEmpty(sourceWpfPath) || string.IsNullOrEmpty(sourceUpdaterConfigPath) || string.IsNullOrEmpty(sourceWpfConfigPath))
                 {
-                    return "Required files are missing from the update package";
+                    return false;
                 }
 
-                // 6. Stage the new updater[cite: 3]
+                // 6. Stage the new updater
                 Directory.CreateDirectory(targetInstallDirectory);
                 string targetUpdaterPath = Path.Combine(targetInstallDirectory, "ruler.updater.exe");
                 string targetUpdaterConfigPath = Path.Combine(targetInstallDirectory, "ruler.updater.exe.config");
@@ -205,7 +205,7 @@ namespace Ruler.Shared.Services
 
                 if (!File.Exists(targetUpdaterPath))
                 {
-                    return "Failed to copy updater executable";
+                    return false;
 				}
 
 
@@ -213,10 +213,10 @@ namespace Ruler.Shared.Services
                 FileInfo targetInfo = new FileInfo(targetUpdaterPath);
                 if (sourceInfo.Length != targetInfo.Length)
                 {
-                    return "Failed to copy updater executable";
+                    return false;
                 }
 
-                // 7. Launch updater and exit[cite: 3]
+                // 7. Launch updater and exit
                 string arguments = $"\"{sourceWpfPath}\" \"{sourceWpfConfigPath}\" \"{targetInstallDirectory}\" \"{currentExeName}\"";
 
                 Process.Start(new ProcessStartInfo
@@ -227,12 +227,12 @@ namespace Ruler.Shared.Services
                 });
 
                 Environment.Exit(0);
-                return "Update applied successfully";
+                return true;
 
             }
             catch
             {
-                return "An error occurred while updating the application";
+                return false;
             }
             finally
             {
@@ -240,13 +240,7 @@ namespace Ruler.Shared.Services
                 DeleteFolderIfExists(tempExtractPath);
                 PurgeTempUpdateZips();
             }
-            finally
-            {
-                // Clean up the temporary extraction folder (if exit didn't occur first)
-                CleanupFailedPackage();
-                DeleteFolderIfExists(tempExtractPath);
-                PurgeTempUpdateZips();
-            }
+            
         }
 
         private static void DeleteFileIfExists(string path)
@@ -273,7 +267,6 @@ namespace Ruler.Shared.Services
             try
             {
                 string tempPath = Path.GetTempPath();
-t
                 string searchPattern = $"*{UpdateConstants.ZipFileName}";
                 string[] leftoverZips = Directory.GetFiles(tempPath, searchPattern);
                 foreach (string zip in leftoverZips)

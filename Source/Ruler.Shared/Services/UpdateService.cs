@@ -123,9 +123,9 @@ namespace Ruler.Shared.Services
                 await Task.Run(() => File.WriteAllBytes(zipPath, zipBytes));
 
                 // 4. Delegate verification, staging, and updater handoff to SecurityService[cite: 2]
-                string success = SecurityService.VerifyAndApplyUpdatePackage(targetAppDirectory, targetAppDirectory);
+               var success = SecurityService.VerifyAndApplyUpdatePackage(targetAppDirectory, targetAppDirectory);
 
-                if (success != "Update applied successfully")
+                if (!success)
                 {
                     return $"Failed to apply update: {success}";
                 }

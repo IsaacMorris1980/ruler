@@ -3,8 +3,6 @@ using Ruler.Shared.Factories;
 using Ruler.Shared.Models;
 using Ruler.Wpf.Commands;
 using Ruler.Wpf.Services;
-using Ruler.Wpf.Views;
-
 using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -16,7 +14,7 @@ namespace Ruler.Wpf.ViewModels
 {
     public class RulerViewModel : ModelBase
     {
-        private readonly WindowManager _windowManager;
+     //   private readonly WindowManager _windowManager;
         public RulerInfo Model { get; }
         private bool _isFlipping = false;
 
