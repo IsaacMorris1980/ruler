@@ -4,12 +4,12 @@ using Ruler.Shared.Helpers;
 using Ruler.Shared.Interfaces;
 using Ruler.Shared.Models;
 using Ruler.Shared.Services;
-
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -34,7 +34,8 @@ namespace Ruler.Wpf.Windows
 
         private RulerInfo _rulerInfo;
         private HwndSource _hwndSource;
-
+        private bool _isUpdatingFromWindow = false;
+        private MenuItemModel _updateMenuItem;
         public RulerInfo RulerData => _rulerInfo;
         public event EventHandler<RulerInfo> DuplicateRequested;
         private bool _showToolTips = true;
@@ -72,7 +73,7 @@ namespace Ruler.Wpf.Windows
         public ICommand ToggleMagnifierCommand { get; private set; }
         public ICommand SetSaveTypeCommand { get; private set; }
         public ICommand SetMagnficationScaleCommand { get; private set; }
-        public ICommand CheckOrApplyUpdateCommand { get; private set; }
+        public ICommand ToggleShowUpdateWindowCommand { get; private set;}
 
         // DI Dependencies
         private readonly IRulerFactory _rulerFactory;
@@ -100,6 +101,37 @@ namespace Ruler.Wpf.Windows
             };
             PoplateCommands();
             PopulateMenu();
+            this.LocationChanged += OnWindowLocationChanged;
+            this.SizeChanged += OnWindowSizeChanged;
+            UpdateOpacityMenuStates();
+            UpdateMagnificationMenuStates();
+            UpdateSaveTypeMenuStates();
+            Loaded += async (s,e) => await CheckForUpdatesAsync();
+        }
+        private void OnWindowLocationChanged(object sender, EventArgs e)
+        {
+            if (_rulerInfo == null || _isUpdatingFromWindow) return;
+
+            _isUpdatingFromWindow = true;
+
+            // Update model location values
+            _rulerInfo.Left = (int)this.Left;
+            _rulerInfo.Top = (int)this.Top;
+
+            _isUpdatingFromWindow = false;
+        }
+
+        private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_rulerInfo == null || _isUpdatingFromWindow) return;
+
+            _isUpdatingFromWindow = true;
+
+            // Update model size values
+            _rulerInfo.Width = (int)this.ActualWidth;
+            _rulerInfo.Height = (int)this.ActualHeight;
+
+            _isUpdatingFromWindow = false;
         }
         public void PoplateCommands()
         {
@@ -115,6 +147,13 @@ namespace Ruler.Wpf.Windows
                     menuItem.IsChecked = this.Topmost;
                 }
                 InvalidateView();
+            });
+            ToggleShowUpdateWindowCommand = new DelegateCommand(_=>{ UpdateWindow updateWindow = new UpdateWindow()
+            {
+                Topmost = true,
+                Owner = this
+            };
+                updateWindow.ShowDialog();
             });
             ToggleLockResizingCommand = new DelegateCommand(_ =>
             {
@@ -444,7 +483,7 @@ namespace Ruler.Wpf.Windows
             MenuItems.Add(_updateMenuItem);
             var magnificationMenu = MenuHelper.CreateRangeMenuItems(
     start: 1.5,
-    end: 10.0,
+    end: 5.0,
     step: 0.5,
     formatString: "{0:0.#}x Zoom", // {0:0.#} ensures clean formatting like "1.5x Zoom" or "2x Zoom"
     valueSelector: i => i,          // Value is already a double
@@ -493,10 +532,11 @@ namespace Ruler.Wpf.Windows
                 InputGestureText = "Ctrl + Esc",
                 Command = ToggleExitCommand
             });
-            MenuItems.Add( new MenuItemModel()
+            MenuItems.Add(new MenuItemModel()
             {
                 Header = "Show keyboard Shortcuts",
                 IsCheckable = false,
+                IsChecked = false,
                 InputGestureText = "I",
                 Command = ToggleShowShortcutsCommand
             });
@@ -531,7 +571,14 @@ namespace Ruler.Wpf.Windows
                 IsChecked = ShowToolTips,
                 Command = new DelegateCommand(_ => ShowToolTips = !ShowToolTips)
             });
-
+            _updateMenuItem = new MenuItemModel()
+            {
+                Header = "Update Available",
+                ToolTip = "Click to update to the latest version",
+                IsCheckable = false,
+                Command =  ToggleShowUpdateWindowCommand
+            };
+            MenuItems.Add(_updateMenuItem);
         }
         private void UpdateOpacityMenuStates()
         {
@@ -824,10 +871,27 @@ namespace Ruler.Wpf.Windows
         {
             throw new NotImplementedException();
         }
-
-        public Task CheckForUpdatesAsync()
+        #if DEBUG
+            private string _owner = "IsaacMorris1980";
+        #else
+            private string _owner = "andrijac";
+        #endif
+        private string _repo = "ruler";
+        private UpdatePackageInfo _packageInfo;
+        public async Task CheckForUpdatesAsync()
         {
-            throw new NotImplementedException();
+
+            string entryVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "1.0.0.0";
+            var udateinfo = await UpdateService.GetLatestGitHubAssetUrlsAsync(_owner, _repo);
+            (bool UpdateAvailable, string LatestVersion) latestVersion = await UpdateService.CheckForUpdateAsync(udateinfo.ManifestUrl, entryVersion);
+            if (latestVersion.UpdateAvailable)
+            {
+                _updateMenuItem.Header = $"Update Available: {latestVersion.LatestVersion}";
+            }
+            else
+            {
+                _updateMenuItem.Header = $"No Updates Available (Current Version: {entryVersion})";
+            }
         }
 
         public void Dispose()

@@ -1,26 +1,24 @@
 ﻿using Newtonsoft.Json;
-
-using Ruler.Shared.Models;
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Ruler.Shared.Models;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-
+using Ruler.Shared.Models;
+using System.Security.Cryptography.X509Certificates;
 namespace Ruler.Shared.Services
 {
     public static class SecurityService
     {
-        // Embedded XML public keys replacing certificate subject lookups[cite: 6]
-        private const string ActivePublicKeyXml = "<RSAKeyValue><Modulus>zI79Gy0RaoMIYuQ62WGG/GDHlyTDwZjeLhSRaBEkelGMj152jApWkCnl+BDQQtEIXGOcxivoOqKe1+EpDEQSUmTmfrlfDJjmOWGbEUVEzZbU7RNT3GaAOWpEQgRFkk+n7diH49HekaZxNp+YAE+5Rllyu8WzEcFwHZtrpTkEd0U=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
-        private const string MasterPublicKeyXml = "<RSAKeyValue><Modulus>uOnRFfY1dstLSAczCS+Ecycw2c52Ks0i6u9CqncmIWYQoD0dqk+oUMJEvnwfcwycFxyYnVlh1BUVUH2PQPIFWhDHDiJvfgVNdHAtoff/UErvd1tH747oBFm8QmDQ3FHj5zhzdNC2YyJjNq8hzYV7OvqvD18HxJfDtDU+qaGtHek=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+        private const string ActivePublicKeyXml = "<RSAKeyValue><Modulus>wY2zbyvfNbH3kY0EH0arMuveaPuQst4Kta5otX2UZFTAbeILwEumMSM6vJ7Tpa8uC1BB4Vh5zdIF4MsPZfVWFgoyWEa/NHPobcgUw8CUBCj1aQ/UDoumIgP0VHHgcwfy0NmiS7ANSpU0xxqQlIm5d6JeR769FZ1kG881GwosITk=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+
+        private const string MasterPublicKeyXml = "<RSAKeyValue><Modulus>3xkaPvlFt7UlsQzCWV5KfrGf+KtaxGaeJt+pINSMtfnPFmZ0r1LJJxK8kegGXTJB3ebR0Ppg5ssZ42e9oWGUNzk6UFsKHD1SnIDVIu/3G4MLqRMwoTPJ4dmVtd7KzvKYrw5AkTquKzOzDgqAjtd3CbmHlimJdxFyiPsbMZ0JQHk=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
         /// <summary>
         /// Verifies a raw byte array against a base64-encoded RSA signature using embedded XML public keys.
@@ -45,7 +43,7 @@ namespace Ruler.Shared.Services
                     }
                     catch
                     {
-                     
+       
                         // Active key parsing or verification failed, proceed to fallback
                     }
 
@@ -66,7 +64,6 @@ namespace Ruler.Shared.Services
                 return false;
             }
         }
-
         /// <summary>
         /// Computes the SHA-256 hash of a file and matches it against the expected hash string[cite: 6].
         /// </summary>
@@ -89,20 +86,17 @@ namespace Ruler.Shared.Services
                 return false;
             }
         }
-
         /// <summary>
         /// Verifies an individual file's hash and its cryptographic signature[cite: 1, 6].
         /// </summary>
         public static bool VerifyFileSignature(string filePath, FileSignature fileSig)
         {
             if (fileSig == null || !File.Exists(filePath)) return false;
-
             // 1. Verify file hash matches manifest record
             if (!VerifyFileHash(filePath, fileSig.Hash))
             {
                 return false;
             }
-
             // 2. Verify file signature bytes[cite: 1]
             byte[] fileBytes = File.ReadAllBytes(filePath);
             return VerifyData(fileBytes, fileSig.Signature);
@@ -130,18 +124,17 @@ namespace Ruler.Shared.Services
                 return false;
             }
 
-            // 1. Verify detached manifest.json.sig
-            string manifestJson = File.ReadAllText(manifestPath);
-            string manifestSig = File.ReadAllText(sigPath);
-            byte[] manifestBytes = Encoding.UTF8.GetBytes(manifestJson);
-
+            // 1. Read raw manifest bytes directly to preserve exact line-ending layout for signature verification
+            byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+            string manifestSig = File.ReadAllText(sigPath).Trim();
             if (!VerifyData(manifestBytes, manifestSig))
             {
                 CleanupFailedPackage();
-                return false; // Manifest has been tampered with
+                return false;
             }
 
             // 2. Deserialize UpdateManifest
+            string manifestJson = Encoding.UTF8.GetString(manifestBytes);
             UpdateManifest manifest = JsonConvert.DeserializeObject<UpdateManifest>(manifestJson);
             if (manifest == null) return false;
 
@@ -153,7 +146,6 @@ namespace Ruler.Shared.Services
                 PurgeTempUpdateZips();
                 return false;
             }
-
             // 4. Extract zip to a temporary directory so we can inspect and verify inner files
             string tempExtractPath = Path.Combine(packageDirectory, "temp_extracted_" + Guid.NewGuid().ToString());
 
@@ -169,8 +161,7 @@ namespace Ruler.Shared.Services
                 string sourceUpdaterConfigPath = string.Empty;
                 string sourceWpfPath = string.Empty;
                 string sourceWpfConfigPath = string.Empty;
-
-                // 5. Verify individual file signatures inside the extracted contents
+                // 5. Verify individual file signatures
                 foreach (var fileSig in manifest.Files)
                 {
                     string targetFilePath = Path.Combine(tempExtractPath, fileSig.FileName);
@@ -182,7 +173,6 @@ namespace Ruler.Shared.Services
                         return false;
                     }
 
-                    // Capture paths for deployment
                     if (fileSig.FileName.Equals("ruler.updater.exe", StringComparison.OrdinalIgnoreCase))
                     {
                         sourceUpdaterPath = targetFilePath;
@@ -197,17 +187,15 @@ namespace Ruler.Shared.Services
                     }
                     if (fileSig.FileName.Equals(currentExeName + ".config", StringComparison.OrdinalIgnoreCase))
                     {
+
                         sourceWpfConfigPath = targetFilePath;
                     }
                 }
-
-                // Ensure required files were present in the verified manifest
-                if (string.IsNullOrEmpty(sourceUpdaterPath) || string.IsNullOrEmpty(sourceWpfPath) || string.IsNullOrEmpty(sourceUpdaterConfigPath)|| string.IsNullOrEmpty(sourceWpfConfigPath)) 
+                if (string.IsNullOrEmpty(sourceUpdaterPath) || string.IsNullOrEmpty(sourceWpfPath) || string.IsNullOrEmpty(sourceUpdaterConfigPath) || string.IsNullOrEmpty(sourceWpfConfigPath))
                 {
                     return false;
                 }
-
-                // 6. Stage the new updater (since the updater isn't currently running, we can copy it directly)
+                // 6. Stage the new updater
                 Directory.CreateDirectory(targetInstallDirectory);
                 string targetUpdaterPath = Path.Combine(targetInstallDirectory, "ruler.updater.exe");
                 string targetUpdaterConfigPath = Path.Combine(targetInstallDirectory, "ruler.updater.exe.config");
@@ -216,11 +204,11 @@ namespace Ruler.Shared.Services
                 File.Copy(sourceUpdaterConfigPath, targetUpdaterConfigPath, overwrite: true);
 
                 // 7. Verify the updater was copied successfully and check size
+
                 if (!File.Exists(targetUpdaterPath))
                 {
                     return false;
                 }
-
                 FileInfo sourceInfo = new FileInfo(sourceUpdaterPath);
                 FileInfo targetInfo = new FileInfo(targetUpdaterPath);
                 if (sourceInfo.Length != targetInfo.Length)
@@ -228,18 +216,14 @@ namespace Ruler.Shared.Services
                     return false;
                 }
 
-                // 8. Prepare arguments and launch the updater to replace the running WPF app
-                int currentProcessId = Process.GetCurrentProcess().Id;
-                string arguments = $"\"{sourceWpfPath}\" \"{sourceWpfConfigPath}\" \"{targetInstallDirectory}\"\"{currentExeName}\" ";
-
+                // 7. Launch updater and exit
+                string arguments = $"\"{sourceWpfPath}\" \"{sourceWpfConfigPath}\" \"{targetInstallDirectory}\" \"{currentExeName}\"";
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = targetUpdaterPath,
                     Arguments = arguments,
                     UseShellExecute = true
                 });
-
-                // 9. Immediately shut down the main app to release file locks
                 Environment.Exit(0);
                 return true;
             }
@@ -250,6 +234,7 @@ namespace Ruler.Shared.Services
             finally
             {
                 // Clean up the temporary extraction folder (if exit didn't occur first)
+
                 CleanupFailedPackage();
                 DeleteFolderIfExists(tempExtractPath);
                 PurgeTempUpdateZips();
@@ -275,6 +260,7 @@ namespace Ruler.Shared.Services
                 catch (Exception)
                 {
                 }
+
             }
         }
         private static void PurgeTempUpdateZips()
@@ -304,4 +290,3 @@ namespace Ruler.Shared.Services
         }
     }
 }
-

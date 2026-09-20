@@ -13,5 +13,5 @@ namespace Ruler.Shared.Models
         {
             get; set;
         }
-     }
+    }
 }

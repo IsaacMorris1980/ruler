@@ -91,7 +91,24 @@
     <Compile Include="Views\ShortcutWindow.xaml.cs">
       <DependentUpon>ShortcutWindow.xaml</DependentUpon>
     </Compile>
-    <Page Include="Views\RulerControl.xaml">
+    <Compile Include="Windows\MagnifierHost.cs" />
+    <Compile Include="Windows\MagnifierWindow.xaml.cs">
+      <DependentUpon>MagnifierWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\MainWindow.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\NativeHelpers.cs" />
+    <Compile Include="Windows\SetSizeWindow.xaml.cs">
+      <DependentUpon>SetSizeWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\ShowShortcutsWindow.xaml.cs">
+      <DependentUpon>ShowShortcutsWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\UpdateWindow.xaml.cs">
+      <DependentUpon>UpdateWindow.xaml</DependentUpon>
+    </Compile>
+    <Page Include="ShortcutWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -104,6 +121,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ShortcutWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\UpdateWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -139,6 +160,10 @@
     <ProjectReference Include="..\Ruler.Shared\Ruler.Shared.csproj">
       <Project>{b66439ff-bc75-469f-99fa-70ac0bac4e7a}</Project>
       <Name>Ruler.Shared</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Ruler.Updater\Ruler.Updater.csproj">
+      <Project>{34488ab1-c129-4bae-ae72-445aaf8ef9ad}</Project>
+      <Name>Ruler.Updater</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

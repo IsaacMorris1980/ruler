@@ -1,5 +1,4 @@
-﻿using Ruler.Shared.Models;
-
+using Ruler.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,7 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 
 namespace Ruler.Updater
 {
@@ -28,7 +26,7 @@ namespace Ruler.Updater
             }
 
             string sourceRulerExe = args[0];
-            string sourceRulerExeConfig  = args[1];
+            string sourceRulerExeConfig = args[1];
             string targetDirectory = args[2];
             string exeName = args[3];
             Console.WriteLine("Ruler Updater initiated...");
@@ -49,13 +47,9 @@ namespace Ruler.Updater
                 }
                 catch { }
 
-              
-                
-
                 // 2. Copy only the executable file
-                
+
                 string targetFile = Path.Combine(targetDirectory, exeName);
-             
                 string targetFileConfig = Path.Combine(targetDirectory, $"{exeName}.config");
 
                 if (File.Exists(sourceRulerExe))
@@ -166,5 +160,4 @@ namespace Ruler.Updater
             }
         }
     }
-
 }
