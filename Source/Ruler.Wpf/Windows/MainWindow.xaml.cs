@@ -1,9 +1,7 @@
-﻿using Ruler.Shared.Commands;
-using Ruler.Shared.Enums;
-using Ruler.Shared.Helpers;
-using Ruler.Shared.Interfaces;
+﻿using Ruler.Shared.Enums;
 using Ruler.Shared.Models;
 using Ruler.Shared.Services;
+using Ruler.Shared.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,10 +11,11 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Ruler.Shared.Commands;
+using Ruler.Shared.Helpers;
 
 namespace Ruler.Wpf.Windows
 {
@@ -35,21 +34,39 @@ namespace Ruler.Wpf.Windows
         private RulerInfo _rulerInfo;
         private HwndSource _hwndSource;
         private bool _isUpdatingFromWindow = false;
-        private MenuItemModel _updateMenuItem;
         public RulerInfo RulerData => _rulerInfo;
         public event EventHandler<RulerInfo> DuplicateRequested;
         private bool _showToolTips = true;
         private UpdatePackageInfo _cachedUpdatePackage;
         private MenuItemModel _updateMenuItem;
+        private readonly Dictionary<MenuItemModel, string> _originalToolTips = new Dictionary<MenuItemModel, string>();
         private bool _isUpdateAvailable = false;
+#if DEBUG
         private string _owner = "IsaacMorris1980";
+#else
+            private string _owner = "andrijac";
+#endif
         private string _repo = "ruler";
         public bool ShowToolTips
         {
             get => _showToolTips;
             set
             {
-                SetProperty(ref _showToolTips,value);
+                if (SetProperty(ref _showToolTips, value))
+                {
+                    // Toggle visibility across all cached menu items and subitems
+                    foreach (var kvp in _originalToolTips)
+                    {
+                        kvp.Key.ToolTip = _showToolTips ? kvp.Value : null;
+                    }
+
+                    // Keep the toggle menu item's own checkmark synced
+                    var menuItem = MenuItems.FirstOrDefault(i => i.Header == "Show Menu Tooltips");
+                    if (menuItem != null)
+                    {
+                        menuItem.IsChecked = _showToolTips;
+                    }
+                }
             }
         }
         private MagnifierWindow _magnifierWindow;
@@ -74,21 +91,24 @@ namespace Ruler.Wpf.Windows
         public ICommand SetSaveTypeCommand { get; private set; }
         public ICommand SetMagnficationScaleCommand { get; private set; }
         public ICommand ToggleShowUpdateWindowCommand { get; private set;}
+        public ICommand ToggleShowMenuTooltips { get; private set; }
+        public ICommand SetRuleScaleCommand { get; private set; }
 
         // DI Dependencies
         private readonly IRulerFactory _rulerFactory;
-        private readonly IMainFormFactory _mainFormFactory;
+       
         private readonly IRulerRegistry _rulerRegistry;
 
-        public MainWindow(RulerInfo info, IRulerFactory factory, IMainFormFactory mainFormFactory, IRulerRegistry rulerRegistry)
+        public MainWindow(RulerInfo info, IRulerFactory factory, IRulerRegistry rulerRegistry)
         {
             _rulerInfo = info;
             _rulerFactory = factory;
-            _mainFormFactory = mainFormFactory;
             _rulerRegistry = rulerRegistry;
 
             InitializeComponent();
+            RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
             DataContext = this;
+            _isUpdatingFromWindow = true;
             // Set size based on info
             this.Width = _rulerInfo.Width;
             this.Height = _rulerInfo.Height;
@@ -103,10 +123,9 @@ namespace Ruler.Wpf.Windows
             PopulateMenu();
             this.LocationChanged += OnWindowLocationChanged;
             this.SizeChanged += OnWindowSizeChanged;
-            UpdateOpacityMenuStates();
-            UpdateMagnificationMenuStates();
-            UpdateSaveTypeMenuStates();
             Loaded += async (s,e) => await CheckForUpdatesAsync();
+            this.ContextMenuOpening += (s, e) => UpdateAllMenuStates();
+            _isUpdatingFromWindow = false;
         }
         private void OnWindowLocationChanged(object sender, EventArgs e)
         {
@@ -139,13 +158,6 @@ namespace Ruler.Wpf.Windows
                 // Toggle both the WPF window and your model state
                 this.Topmost = !_rulerInfo.TopMost;
                 _rulerInfo.TopMost = this.Topmost;
-
-                // Find the menu item and update its checkmark (handles keyboard triggers)
-                var menuItem = MenuItems.FirstOrDefault(i => i.Header == "Stay On Top");
-                if (menuItem != null)
-                {
-                    menuItem.IsChecked = this.Topmost;
-                }
                 InvalidateView();
             });
             ToggleShowUpdateWindowCommand = new DelegateCommand(_=>{ UpdateWindow updateWindow = new UpdateWindow()
@@ -158,31 +170,22 @@ namespace Ruler.Wpf.Windows
             ToggleLockResizingCommand = new DelegateCommand(_ =>
             {
                 _rulerInfo.IsLocked = !_rulerInfo.IsLocked;
-                var menuItem = MenuItems.FirstOrDefault(i => i.Header == "Lock Resizing");
-                if (menuItem != null)
-                {
-                    menuItem.IsChecked = _rulerInfo.IsLocked;
-                }
                 InvalidateView();
         });
             ToggleOrientationCommand = new DelegateCommand(_ =>
             {
+                _isUpdatingFromWindow = true;
             _rulerInfo.ToggleOrientation();
-            var menuItem = MenuItems.FirstOrDefault(i => i.Header == "Is Vertical?");
-                if (menuItem != null)
-                {
-                    menuItem.IsChecked = _rulerInfo.IsVertical;
-                }
+                this.Width = _rulerInfo.Width;
+                this.Height = _rulerInfo.Height;
                 InvalidateView();
+                _isUpdatingFromWindow = false;
             });
             ToggleToolTipCommand = new DelegateCommand(_ =>
             {
+                _rulerInfo.ShowToolTip = !_rulerInfo.ShowToolTip;
                 UpdateToolTip();
-                var menuItem = MenuItems.FirstOrDefault(i => i.Header == "Show ToolTip");
-                if (menuItem != null)
-                {
-                    menuItem.IsChecked = _rulerInfo.IsVertical;
-                }
+                InvalidateView();
             });
             ToggleSetSizeCommand = new DelegateCommand(_ =>
             {
@@ -256,7 +259,7 @@ namespace Ruler.Wpf.Windows
             });
             ToggleShowShortcutsCommand = new DelegateCommand(_ =>
             {
-                ShortcutWindow shortcut = new ShortcutWindow();
+               ShowShortcutsWindow shortcut = new ShowShortcutsWindow();
                 shortcut.Topmost = true;
                 shortcut.Owner = this;
                 shortcut.ShowDialog();
@@ -287,12 +290,13 @@ namespace Ruler.Wpf.Windows
                     }
 
 
-                    UpdateSaveTypeMenuStates();
+               //     UpdateSaveTypeMenuStates();
                 }
             });
-            CheckOrApplyUpdateCommand = new DelegateCommand(async _ => await HandleUpdateClickAsync());
-           
-
+            ToggleShowMenuTooltips = new DelegateCommand(_ =>
+            {
+                ShowToolTips = !ShowToolTips;
+            });
             SetMagnficationScaleCommand = new DelegateCommand<object>(param =>
             {
                 double scale = 0;
@@ -312,7 +316,7 @@ namespace Ruler.Wpf.Windows
                     _rulerInfo.Magnifier.ZoomLevel = scale;
 
                     // Optional: Update check states for magnification menu items if you have a state-updater method
-                    UpdateMagnificationMenuStates();
+               //     UpdateMagnificationMenuStates();
                 }
             });
             SetOpacityCommand = new DelegateCommand<object>(parameter =>
@@ -370,7 +374,7 @@ namespace Ruler.Wpf.Windows
                     _rulerInfo.Opacity = finalOpacity;
                 }
 
-                UpdateOpacityMenuStates();
+              //  UpdateOpacityMenuStates();
                 InvalidateView();
             });
             MaxOpacityCommand = new DelegateCommand(_ =>
@@ -388,24 +392,57 @@ namespace Ruler.Wpf.Windows
                 );
             ToggleMagnifierCommand = new DelegateCommand(_ =>
             {
-                if (_magnifierWindow != null)
+                _rulerInfo.Magnifier.IsActive = !_rulerInfo.Magnifier.IsActive;
+                if (!_rulerInfo.Magnifier.IsActive)
                 {
-                    // If it's already open, close it
-                    _magnifierWindow.Close();
+                    if (_magnifierWindow != null)
+                    {
+                        _magnifierWindow.Close();
+                    }
                 }
                 else
                 {
-                    // If it's closed, create, track, and show it
-                    _magnifierWindow = new MagnifierWindow(RulerData)
+                    if (_magnifierWindow != null)
                     {
-                        Owner = this
-                    };
+                        _magnifierWindow.Show();
+                    }
+                    else
+                    {
+                        // If it's closed, create, track, and show it
+                        _magnifierWindow = new MagnifierWindow(RulerData)
+                        {
+                            Owner = this
+                        };
 
-                    // Clear the reference automatically when the window closes
-                    _magnifierWindow.Closed += (s, args) => _magnifierWindow = null;
+                        // Clear the reference automatically when the window closes
+                        _magnifierWindow.Closed += (s, args) => _magnifierWindow = null;
 
-                    _magnifierWindow.Show();
+                        _magnifierWindow.Show();
+                    }
                 }
+            });
+            SetRuleScaleCommand = new DelegateCommand<object>(param =>
+            {
+                double scale = 0;
+
+                // Handles whether the command parameter passes the MenuItemModel or the direct double value
+                if (param is MenuItemModel model && model.Value is double dVal)
+                {
+                    scale = dVal;
+                }
+                else if (param is double directVal)
+                {
+                    scale = directVal;
+                }
+
+                if (scale > 0)
+                {
+                    _rulerInfo.RulerScale = scale;
+
+                    // Optional: Update check states for magnification menu items if you have a state-updater method
+                    //     UpdateMagnificationMenuStates();
+                }
+                InvalidateView();
             });
         }
 
@@ -473,14 +510,6 @@ namespace Ruler.Wpf.Windows
                 InputGestureText = "G",
                 Command = ToggleShowGuidelineCommand
             });
-            _updateMenuItem = new MenuItemModel()
-            {
-                Header = "Check for Updates",
-                IsCheckable = false,
-                Command = CheckOrApplyUpdateCommand,
-                InputGestureText = "Ctrl + U"
-            };
-            MenuItems.Add(_updateMenuItem);
             var magnificationMenu = MenuHelper.CreateRangeMenuItems(
     start: 1.5,
     end: 5.0,
@@ -503,6 +532,25 @@ namespace Ruler.Wpf.Windows
                 IsCheckable = false,
                 IsChecked = false,
                 Items = magnificationMenu
+            });
+            int[] chromeScalePercentages = new[]
+ {
+    25, 33, 50, 67, 75, 80, 90, 100,
+    110, 125, 150, 175, 200, 250, 300, 400, 500
+};
+
+            var scaleSubmenu = MenuHelper.CreateDiscreteMenuItems(
+                values: chromeScalePercentages,
+                formatString: "{0}%",
+                valueSelector: v => v / 100.0,  // Converts integer percentage (e.g., 125) to double scale (1.25)
+                command: SetRuleScaleCommand      // Your ICommand bound to handle scale changes
+            );
+            MenuItems.Add(new MenuItemModel()
+            {
+                Header = "Ruler Scale",
+                IsCheckable = false,
+                IsChecked = false,
+                Items = scaleSubmenu
             });
             MenuItems.Add(new MenuItemModel()
             {
@@ -548,20 +596,20 @@ namespace Ruler.Wpf.Windows
     valueSelector: i => (double)i / 100.0, // Converts 50 to 0.5
     command: SetOpacityCommand
 );
-            MenuItemModel opacity = new MenuItemModel()
+           MenuItems.Add( new MenuItemModel()
             {
                 Header = "Opacity",
                 ToolTip = "Select i and see the different opacity commands on the short cuts page",
                 Items = opacitymenuitems
                
-            };
+            });
             var saveMenuItems = SaveTypes.None.ToMenuItems(SetSaveTypeCommand);
-            MenuItemModel saveTypes = new MenuItemModel()
+            MenuItems.Add(new MenuItemModel()
             {
                 Header = "Save Rule Data?",
                 Items = saveMenuItems
                 
-            };
+            });
 
             MenuItems.Add(new MenuItemModel
             {
@@ -569,7 +617,7 @@ namespace Ruler.Wpf.Windows
                 ToolTip = "Enable or disable tooltips across the context menu",
                 IsCheckable = true,
                 IsChecked = ShowToolTips,
-                Command = new DelegateCommand(_ => ShowToolTips = !ShowToolTips)
+                Command = ToggleShowMenuTooltips
             });
             _updateMenuItem = new MenuItemModel()
             {
@@ -579,6 +627,9 @@ namespace Ruler.Wpf.Windows
                 Command =  ToggleShowUpdateWindowCommand
             };
             MenuItems.Add(_updateMenuItem);
+            _originalToolTips.Clear();
+            CacheToolTipsRecursively(MenuItems);
+            UpdateAllMenuStates();
         }
         private void UpdateOpacityMenuStates()
         {
@@ -615,68 +666,84 @@ namespace Ruler.Wpf.Windows
                 }
             }
         }
-        private void UpdateSaveTypeMenuStates()
-        {
-            var saveTypeParent = MenuItems.FirstOrDefault(i => i.Header == "Save Settings");
-            if (saveTypeParent?.Items == null) return;
+        //private void UpdateSaveTypeMenuStates()
+        //{
+        //    var saveTypeParent = MenuItems.FirstOrDefault(i => i.Header == "Save Settings");
+        //    if (saveTypeParent?.Items == null) return;
 
-            foreach (var item in saveTypeParent.Items)
-            {
-                if (item.Value is SaveTypes enumValue)
-                {
-                    if (enumValue == SaveTypes.None)
-                    {
-                        item.IsChecked = (_rulerInfo.SaveType == SaveTypes.None);
-                    }
-                    else if (enumValue == SaveTypes.All)
-                    {
-                        item.IsChecked = (_rulerInfo.SaveType == SaveTypes.All);
-                    }
-                    else
-                    {
-                        item.IsChecked = _rulerInfo.SaveType.HasFlag(enumValue);
-                    }
-                }
-            }
-        }
-        private void UpdateMagnificationMenuStates()
-        {
-            var magnificationParent = MenuItems.FirstOrDefault(i => i.Header == "Magnification Scale");
-            if (magnificationParent?.Items == null) return;
+        //    foreach (var item in saveTypeParent.Items)
+        //    {
+        //        if (item.Value is SaveTypes enumValue)
+        //        {
+        //            if (enumValue == SaveTypes.None)
+        //            {
+        //                item.IsChecked = (_rulerInfo.SaveType == SaveTypes.None);
+        //            }
+        //            else if (enumValue == SaveTypes.All)
+        //            {
+        //                item.IsChecked = (_rulerInfo.SaveType == SaveTypes.All);
+        //            }
+        //            else
+        //            {
+        //                item.IsChecked = _rulerInfo.SaveType.HasFlag(enumValue);
+        //            }
+        //        }
+        //    }
+        //}
+        //private void UpdateMagnificationMenuStates()
+        //{
+        //    var magnificationParent = MenuItems.FirstOrDefault(i => i.Header == "Magnification Scale");
+        //    if (magnificationParent?.Items == null) return;
 
-            foreach (var item in magnificationParent.Items)
-            {
-                if (item.Value is double scaleValue)
-                {
-                    item.IsChecked = Math.Abs(_rulerInfo.Magnifier.ZoomLevel - scaleValue) < 0.0001;
-                }
-            }
-        }
+        //    foreach (var item in magnificationParent.Items)
+        //    {
+        //        if (item.Value is double scaleValue)
+        //        {
+        //            item.IsChecked = Math.Abs(_rulerInfo.Magnifier.ZoomLevel - scaleValue) < 0.0001;
+        //        }
+        //    }
+        //}
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-            if (!_rulerInfo.Guideline.IsLocked)
-            {
-                var position = e.GetPosition(this);
+            if (_rulerInfo?.Guideline?.IsEnabled != true || _rulerInfo.Guideline.IsLocked)
+                return;
 
-                // If vertical ruler, track Y coordinate; otherwise track X coordinate
-                _rulerInfo.Guideline.Position = _rulerInfo.IsVertical ? position.Y : position.X;
-            }
+            var position = e.GetPosition(this);
+            if (position.X <= 0 && position.Y <= 0)
+                return;
+            double newPosition = _rulerInfo.IsVertical ? position.Y : position.X;
+
+            // GUARD 2: Keep the guideline strictly within the window boundaries
+            double maxLimit = _rulerInfo.IsVertical ? ActualHeight : ActualWidth;
+            if (newPosition < 0 || newPosition > maxLimit)
+                return;
+
+            // Update position and redraw
+            _rulerInfo.Guideline.Position = newPosition; 
+            InvalidateView();
         }
 
         private void UpdateToolTip()
         {
-            _rulerInfo.ShowToolTip = !_rulerInfo.ShowToolTip;
+           
             string toolTipString;
             if (_rulerInfo.ShowToolTip)
             {
+                double userScale = _rulerInfo?.RulerScale ?? 1.0;
+
+                // Calculate logical length based on scale
+                int logicalWidth = (int)(ActualWidth / userScale);
+                int logicalHeight = (int)(ActualHeight / userScale);
+
                 toolTipString = _rulerInfo.IsVertical
-    ? $"{(int)this.Height} pixels"
-    : $"{(int)this.Width} pixels";
+                    ? $"{logicalHeight} units"
+                    : $"{logicalWidth} units";
+
                 if (_rulerInfo.Guideline.IsEnabled && _rulerInfo.Guideline.IsLocked)
                 {
-
-                    toolTipString += $"{Environment.NewLine}Guideline: {(int)_rulerInfo.Guideline.Position}";
+                    int logicalGuideline = (int)(_rulerInfo.Guideline.Position / userScale);
+                    toolTipString += $"{Environment.NewLine}Guideline: {logicalGuideline}";
                 }
                 this.ToolTip = toolTipString;
             }
@@ -717,7 +784,6 @@ namespace Ruler.Wpf.Windows
             }
             return IntPtr.Zero;
         }
-
         // Equivalent to OnPaint
         protected override void OnRender(DrawingContext drawingContext)
         {
@@ -730,11 +796,13 @@ namespace Ruler.Wpf.Windows
             var fontTypeface = new Typeface("Segoe UI");
             double dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
+            // Draw background rectangle across the full window size
             var rulerRect = new Rect(0, 0, ActualWidth, ActualHeight);
             drawingContext.DrawRectangle(Brushes.LightSlateGray, tickPen, rulerRect);
 
             bool isVertical = _rulerInfo?.IsVertical ?? false;
 
+            // Draw ticks and numbers filling the full size, scaled by RulerScale
             if (isVertical)
             {
                 DrawVerticalRuler(drawingContext, tickPen, textBrush, fontTypeface, dpi);
@@ -743,41 +811,63 @@ namespace Ruler.Wpf.Windows
             {
                 DrawHorizontalRuler(drawingContext, tickPen, textBrush, fontTypeface, dpi);
             }
+
+            // Draw Guideline at its exact pixel position across the full window
+            if (_rulerInfo?.Guideline?.IsEnabled == true)
+            {
+                Brush guideBrush = Brushes.Red; // Default fallback
+
+                if (!string.IsNullOrEmpty(_rulerInfo.Guideline.GuidelineColorHex))
+                {
+                    try
+                    {
+                        guideBrush = (Brush)new BrushConverter().ConvertFromString(_rulerInfo.Guideline.GuidelineColorHex);
+                    }
+                    catch
+                    {
+                        guideBrush = Brushes.Red;
+                    }
+                }
+
+                var guidePen = new Pen(guideBrush, 1);
+
+                if (isVertical)
+                {
+                    double y = _rulerInfo.Guideline.Position;
+                    drawingContext.DrawLine(guidePen, new Point(0, y), new Point(ActualWidth, y));
+                }
+                else
+                {
+                    double x = _rulerInfo.Guideline.Position;
+                    drawingContext.DrawLine(guidePen, new Point(x, 0), new Point(x, ActualHeight));
+                }
+            }
+        DrawAlwaysOnDisplay(drawingContext,dpi,_rulerInfo.IsVertical);
+
         }
 
         private void DrawHorizontalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
         {
             bool dualSided = ActualHeight > 100;
+            double userScale = _rulerInfo?.RulerScale ?? 1.0;
 
-            for (double x = 0; x <= ActualWidth; x += 10)
+            if (userScale >= 1.0)
             {
-                bool isMajor = (x % 50 == 0);
-                bool isMedium = (x % 25 == 0);
-                double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
-
-                dc.DrawLine(pen, new Point(x, 0), new Point(x, tickLength));
-                dc.DrawLine(pen, new Point(x, ActualHeight), new Point(x, ActualHeight - tickLength));
-
-                if (isMajor && x > 0)
+                // Zoomed in or normal: Loop by logical units and round to physical pixels
+                double maxLogical = ActualWidth / userScale;
+                for (double l = 0; l <= maxLogical; l += 1.0)
                 {
-                    var formattedText = new FormattedText(
-                        x.ToString(),
-                        System.Globalization.CultureInfo.CurrentCulture,
-                        FlowDirection.LeftToRight,
-                        typeface,
-                        10,
-                        brush,
-                        dpi);
-
-                    if (dualSided)
-                    {
-                        dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), 15));
-                        dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), ActualHeight - 25));
-                    }
-                    else
-                    {
-                        dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), (ActualHeight / 2) - (formattedText.Height / 2)));
-                    }
+                    double x = Math.Round(l * userScale);
+                    DrawHorizontalTickAtLogicalValue(dc, pen, brush, typeface, dpi, l, x, dualSided);
+                }
+            }
+            else
+            {
+                // Zoomed out (< 1.0): Iterate physical pixels to prevent compressed ticks from skipping tiers
+                for (double x = 0; x <= ActualWidth; x += 1.0)
+                {
+                    double logicalValue = x / userScale;
+                    DrawHorizontalTickAtLogicalValue(dc, pen, brush, typeface, dpi, logicalValue, x, dualSided);
                 }
             }
         }
@@ -785,45 +875,339 @@ namespace Ruler.Wpf.Windows
         private void DrawVerticalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
         {
             bool dualSided = ActualWidth > 100;
+            double userScale = _rulerInfo?.RulerScale ?? 1.0;
 
-            for (double y = 0; y <= ActualHeight; y += 10)
+            if (userScale >= 1.0)
             {
-                bool isMajor = (y % 50 == 0);
-                bool isMedium = (y % 25 == 0);
-                double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
-
-                dc.DrawLine(pen, new Point(0, y), new Point(tickLength, y));
-                dc.DrawLine(pen, new Point(ActualWidth, y), new Point(ActualWidth - tickLength, y));
-
-                if (isMajor && y > 0)
+                double maxLogical = ActualHeight / userScale;
+                for (double l = 0; l <= maxLogical; l += 1.0)
                 {
-                    var formattedText = new FormattedText(
-                        y.ToString(),
-                        System.Globalization.CultureInfo.CurrentCulture,
-                        FlowDirection.LeftToRight,
-                        typeface,
-                        10,
-                        brush,
-                        dpi);
-
-                    if (dualSided)
-                    {
-                        dc.DrawText(formattedText, new Point(22, y - (formattedText.Height / 2)));
-                        dc.DrawText(formattedText, new Point(ActualWidth - 28, y - (formattedText.Height / 2)));
-                    }
-                    else
-                    {
-                        dc.DrawText(formattedText, new Point((ActualWidth / 2) - (formattedText.Width / 2), y - (formattedText.Height / 2)));
-                    }
+                    double y = Math.Round(l * userScale);
+                    DrawVerticalTickAtLogicalValue(dc, pen, brush, typeface, dpi, l, y, dualSided);
+                }
+            }
+            else
+            {
+                for (double y = 0; y <= ActualHeight; y += 1.0)
+                {
+                    double logicalValue = y / userScale;
+                    DrawVerticalTickAtLogicalValue(dc, pen, brush, typeface, dpi, logicalValue, y, dualSided);
                 }
             }
         }
-        // Mouse Events
+
+        private void DrawHorizontalTickAtLogicalValue(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi, double logicalValue, double x, bool dualSided)
+        {
+            long roundedLogical = (long)Math.Round(logicalValue);
+
+            bool is100 = (roundedLogical % 100 == 0);
+            bool is50 = (roundedLogical % 50 == 0);
+            bool is10 = (roundedLogical % 10 == 0);
+            bool is5 = (roundedLogical % 5 == 0);
+            bool is2 = (roundedLogical % 2 == 0);
+
+            double tickLength = 0;
+            bool shouldDraw = true;
+
+            if (is100) tickLength = 14;
+            else if (is50) tickLength = 11;
+            else if (is10) tickLength = 8;
+            else if (is5) tickLength = 6;
+            else if (is2) tickLength = 4;
+            else
+            {
+                shouldDraw = false;
+            }
+
+            if (!shouldDraw) return;
+
+            // Draw crisp 1-pixel wide filled rectangles
+            dc.DrawRectangle(brush, null, new Rect(x, 0, 1.0, tickLength));
+            dc.DrawRectangle(brush, null, new Rect(x, ActualHeight - tickLength, 1.0, tickLength));
+
+            if (is100 && logicalValue >= 0)
+            {
+                var formattedText = new FormattedText(
+                    roundedLogical.ToString(),
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    typeface,
+                    10,
+                    brush,
+                    dpi);
+
+                if (dualSided)
+                {
+                    dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), 16));
+                    dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), ActualHeight - 26));
+                }
+                else
+                {
+                    dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), (ActualHeight / 2) - (formattedText.Height / 2)));
+                }
+            }
+        }
+
+        private void DrawVerticalTickAtLogicalValue(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi, double logicalValue, double y, bool dualSided)
+        {
+            long roundedLogical = (long)Math.Round(logicalValue);
+
+            bool is100 = (roundedLogical % 100 == 0);
+            bool is50 = (roundedLogical % 50 == 0);
+            bool is10 = (roundedLogical % 10 == 0);
+            bool is5 = (roundedLogical % 5 == 0);
+            bool is2 = (roundedLogical % 2 == 0);
+
+            double tickLength = 0;
+            bool shouldDraw = true;
+
+            if (is100) tickLength = 14;
+            else if (is50) tickLength = 11;
+            else if (is10) tickLength = 8;
+            else if (is5) tickLength = 6;
+            else if (is2) tickLength = 4;
+            else
+            {
+                shouldDraw = false;
+            }
+
+            if (!shouldDraw) return;
+
+            // Draw crisp 1-pixel high filled rectangles for vertical ticks
+            dc.DrawRectangle(brush, null, new Rect(0, y, tickLength, 1.0));
+            dc.DrawRectangle(brush, null, new Rect(ActualWidth - tickLength, y, tickLength, 1.0));
+
+            if (is100 && logicalValue >= 0)
+            {
+                var formattedText = new FormattedText(
+                    roundedLogical.ToString(),
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    typeface,
+                    10,
+                    brush,
+                    dpi);
+
+                if (dualSided)
+                {
+                    dc.DrawText(formattedText, new Point(22, y - (formattedText.Height / 2)));
+                    dc.DrawText(formattedText, new Point(ActualWidth - 28, y - (formattedText.Height / 2)));
+                }
+                else
+                {
+                    dc.DrawText(formattedText, new Point((ActualWidth / 2) - (formattedText.Width / 2), y - (formattedText.Height / 2)));
+                }
+            }
+        }
+        private void DrawAlwaysOnDisplay(DrawingContext dc, double dpi, bool isVertical)
+        {
+            double userScale = _rulerInfo?.RulerScale ?? 1.0;
+            if (userScale < 0.75) return;
+            int logicalWidth = (int)(ActualWidth / userScale);
+            int logicalHeight = (int)(ActualHeight / userScale);
+
+            // Build the readout text string
+            string labelText = isVertical
+                ? $"{logicalHeight} pixels"
+                : $"{logicalWidth} pixels";
+
+            if (_rulerInfo?.Guideline?.IsEnabled == true)
+            {
+                int logicalGuideline = (int)(_rulerInfo.Guideline.Position / userScale);
+                labelText += $"{Environment.NewLine}Guideline: {logicalGuideline}";
+            }
+
+            var textBrush = Brushes.Black;
+            var fontTypeface = new Typeface("Segoe UI");
+
+            var formattedText = new FormattedText(
+                labelText,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                fontTypeface,
+                11, // Font size
+                textBrush,
+                dpi);
+
+            Point textPosition;
+
+            if (isVertical)
+            {
+                // Vertical Ruler: 5 pixels down from the top edge, centered horizontally
+                double x = (ActualWidth / 2) - (formattedText.Width / 2);
+                double y = 5;
+                textPosition = new Point(x, y);
+            }
+            else
+            {
+                // Horizontal Ruler: 5 pixels in from the left edge, centered vertically
+                double x = 5;
+                double y = (ActualHeight / 2) - (formattedText.Height / 2);
+                textPosition = new Point(x, y);
+            }
+
+         
+            // Draw the actual text on top
+            dc.DrawText(formattedText, textPosition);
+        }
+        //// Equivalent to OnPaint
+        //protected override void OnRender(DrawingContext drawingContext)
+        //{
+        //    base.OnRender(drawingContext);
+
+        //    if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
+        //    var tickPen = new Pen(Brushes.Black, 1);
+        //    var textBrush = Brushes.Black;
+        //    var fontTypeface = new Typeface("Segoe UI");
+
+        //    // 1. Get system DPI and combine with the user's ruler scale factor
+        //    var dpi = VisualTreeHelper.GetDpi(this);
+        //    double userScale = _rulerInfo?.RulerScale ?? 1.0;
+        //    double scaleX = userScale * dpi.DpiScaleX;
+        //    double scaleY = userScale * dpi.DpiScaleY;
+
+        //    // Draw background rectangle at full size (unscaled background fill)
+        //    var rulerRect = new Rect(0, 0, ActualWidth, ActualHeight);
+        //    drawingContext.DrawRectangle(Brushes.LightSlateGray, tickPen, rulerRect);
+
+        //    // 2. Push the combined scale transform
+        //    drawingContext.PushTransform(new ScaleTransform(scaleX, scaleY));
+        //    try
+        //    {
+        //        bool isVertical = _rulerInfo?.IsVertical ?? false;
+
+        //        if (isVertical)
+        //        {
+        //            DrawVerticalRuler(drawingContext, tickPen, textBrush, fontTypeface, dpi.PixelsPerDip);
+        //        }
+        //        else
+        //        {
+        //            DrawHorizontalRuler(drawingContext, tickPen, textBrush, fontTypeface, dpi.PixelsPerDip);
+        //        }
+
+        //        // Guideline rendering
+        //        if (_rulerInfo?.Guideline?.IsEnabled == true)
+        //        {
+        //            Brush guideBrush = Brushes.Red; // Default fallback
+
+        //            if (!string.IsNullOrEmpty(_rulerInfo.Guideline.GuidelineColorHex))
+        //            {
+        //                try
+        //                {
+        //                    guideBrush = (Brush)new BrushConverter().ConvertFromString(_rulerInfo.Guideline.GuidelineColorHex);
+        //                }
+        //                catch
+        //                {
+        //                    guideBrush = Brushes.Red;
+        //                }
+        //            }
+
+        //            var guidePen = new Pen(guideBrush, 1);
+
+        //            if (isVertical)
+        //            {
+        //                double y = _rulerInfo.Guideline.Position;
+        //                drawingContext.DrawLine(guidePen, new Point(0, y), new Point(ActualWidth, y));
+        //            }
+        //            else
+        //            {
+        //                double x = _rulerInfo.Guideline.Position;
+        //                drawingContext.DrawLine(guidePen, new Point(x, 0), new Point(x, ActualHeight));
+        //            }
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        // 3. Always pop the transform to maintain the rendering stack state
+        //        drawingContext.Pop();
+        //    }
+        //}
+
+        //private void DrawHorizontalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
+        //{
+        //    bool dualSided = ActualHeight > 100;
+
+        //    for (double x = 0; x <= ActualWidth; x += 10)
+        //    {
+        //        bool isMajor = (x % 50 == 0);
+        //        bool isMedium = (x % 25 == 0);
+        //        double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
+
+        //        dc.DrawLine(pen, new Point(x, 0), new Point(x, tickLength));
+        //        dc.DrawLine(pen, new Point(x, ActualHeight), new Point(x, ActualHeight - tickLength));
+
+        //        if (isMajor && x > 0)
+        //        {
+        //            var formattedText = new FormattedText(
+        //                x.ToString(),
+        //                System.Globalization.CultureInfo.CurrentCulture,
+        //                FlowDirection.LeftToRight,
+        //                typeface,
+        //                10,
+        //                brush,
+        //                dpi);
+
+        //            if (dualSided)
+        //            {
+        //                dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), 15));
+        //                dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), ActualHeight - 25));
+        //            }
+        //            else
+        //            {
+        //                dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), (ActualHeight / 2) - (formattedText.Height / 2)));
+        //            }
+        //        }
+        //    }
+        //}
+
+        //private void DrawVerticalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
+        //{
+        //    bool dualSided = ActualWidth > 100;
+
+        //    for (double y = 0; y <= ActualHeight; y += 10)
+        //    {
+        //        bool isMajor = (y % 50 == 0);
+        //        bool isMedium = (y % 25 == 0);
+        //        double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
+
+        //        dc.DrawLine(pen, new Point(0, y), new Point(tickLength, y));
+        //        dc.DrawLine(pen, new Point(ActualWidth, y), new Point(ActualWidth - tickLength, y));
+
+        //        if (isMajor && y > 0)
+        //        {
+        //            var formattedText = new FormattedText(
+        //                y.ToString(),
+        //                System.Globalization.CultureInfo.CurrentCulture,
+        //                FlowDirection.LeftToRight,
+        //                typeface,
+        //                10,
+        //                brush,
+        //                dpi);
+
+        //            if (dualSided)
+        //            {
+        //                dc.DrawText(formattedText, new Point(22, y - (formattedText.Height / 2)));
+        //                dc.DrawText(formattedText, new Point(ActualWidth - 28, y - (formattedText.Height / 2)));
+        //            }
+        //            else
+        //            {
+        //                dc.DrawText(formattedText, new Point((ActualWidth / 2) - (formattedText.Width / 2), y - (formattedText.Height / 2)));
+        //            }
+        //        }
+        //    }
+        //}
+        //// Mouse Events
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             base.OnMouseDown(e);
             if (e.ChangedButton == MouseButton.Left)
-                this.DragMove(); // WPF native helper for moving windows
+            {
+                // Record absolute screen position on click start
+                _mouseScreenPosition = this.PointToScreen(new Point(0,0));
+
+                this.DragMove(); // Always allow window dragging
+            }
         }
 
         // Implementation of IRuler
@@ -871,13 +1255,10 @@ namespace Ruler.Wpf.Windows
         {
             throw new NotImplementedException();
         }
-        #if DEBUG
-            private string _owner = "IsaacMorris1980";
-        #else
-            private string _owner = "andrijac";
-        #endif
-        private string _repo = "ruler";
+       
         private UpdatePackageInfo _packageInfo;
+        private Point _mouseScreenPosition;
+
         public async Task CheckForUpdatesAsync()
         {
 
@@ -999,15 +1380,6 @@ namespace Ruler.Wpf.Windows
             bool down = Keyboard.IsKeyDown(Key.Down);
             bool left = Keyboard.IsKeyDown(Key.Left);
             bool right = Keyboard.IsKeyDown(Key.Right);
-            if (isCtrl && e.Key == Key.U)
-            {
-                if (CheckOrApplyUpdateCommand.CanExecute(null))
-                {
-                    CheckOrApplyUpdateCommand.Execute(null);
-                    e.Handled = true;
-                    return;
-                }
-            }
 
             if (up && left) { dx = -1; dy = -1; }
             else if (up && right) { dx = 1; dy = -1; }
@@ -1094,6 +1466,155 @@ namespace Ruler.Wpf.Windows
         public void RefreshAll()
         {
             OnPropertyChanged(string.Empty);
+        }
+        public void UpdateAllMenuStates()
+        {
+            RecursiveUpdateStates(MenuItems, null);
+        }
+
+        private void RecursiveUpdateStates(IEnumerable<MenuItemModel> items, string parentHeader)
+        {
+            if (items == null) return;
+
+            foreach (var item in items)
+            {
+                EvaluateItemState(item, parentHeader);
+
+                // Recurse into subitems, passing the current item's header as the parent context
+                if (item.Items != null && item.Items.Count > 0)
+                {
+                    RecursiveUpdateStates(item.Items, item.Header);
+                }
+            }
+        }
+
+        private void EvaluateItemState(MenuItemModel item, string parentHeader)
+        {
+            // 1. Top-Level / Boolean Checkable Items
+            if (item.Header == "Stay On Top")
+            {
+                item.IsCheckable = true;
+                item.IsChecked = _rulerInfo.TopMost;
+            }
+            else if (item.Header == "Lock Resizing")
+            {
+                item.IsCheckable = true;
+                item.IsChecked = _rulerInfo.IsLocked;
+            }
+            else if (item.Header == "Is Vertical?")
+            {
+                item.IsCheckable = true;
+                item.IsChecked = _rulerInfo.IsVertical;
+            }
+            else if (item.Header == "Show ToolTip")
+            {
+                item.IsCheckable = true;
+                item.IsChecked = _rulerInfo.ShowToolTip;
+            }
+            else if (item.Header == "Show Guideline")
+            {
+                item.IsCheckable = true;
+                item.IsChecked = _rulerInfo.Guideline.IsEnabled;
+            }
+            else if (item.Header == "Show Magnifier")
+            {
+                item.IsCheckable = true;
+                item.IsChecked = _rulerInfo.Magnifier.IsActive;
+            }
+            else if (item.Header == "Show Menu Tooltips")
+            {
+                item.IsCheckable = true;
+                item.IsChecked = ShowToolTips;
+            }
+            // 2. Subitems based on Parent Context
+            else if (parentHeader == "Magnification Scale")
+            {
+                item.IsCheckable = true; // Force checkable so WPF renders the box
+                if (item.Value is double scaleVal)
+                {
+                    item.IsChecked = Math.Abs(_rulerInfo.Magnifier.ZoomLevel - scaleVal) < 0.0001;
+                }
+            }
+            else if (parentHeader == "Opacity")
+            {
+                item.IsCheckable = true; // Force checkable so WPF renders the box
+                if (item.Value is double opacityVal)
+                {
+                    item.IsChecked = Math.Abs(opacityVal - _rulerInfo.Opacity) < 0.001;
+                }
+                else if (item.Value is int opacityInt)
+                {
+                    double itemOpacity = opacityInt / 100.0;
+                    item.IsChecked = Math.Abs(itemOpacity - _rulerInfo.Opacity) < 0.001;
+                }
+            }
+            else if (parentHeader == "Save Rule Data?")
+            {
+                item.IsCheckable = true; // Force checkable so WPF renders the box
+                if (item.Value is SaveTypes saveTypeVal)
+                {
+                    if (saveTypeVal == SaveTypes.None)
+                    {
+                        item.IsChecked = (_rulerInfo.SaveType == SaveTypes.None);
+                    }
+                    else if (saveTypeVal == SaveTypes.All)
+                    {
+                        item.IsChecked = (_rulerInfo.SaveType == SaveTypes.All);
+                    }
+                    else
+                    {
+                        item.IsChecked = _rulerInfo.SaveType.HasFlag(saveTypeVal);
+                    }
+                }
+            }
+            if (parentHeader == "Scale" && item.Value is double targetScale)
+            {
+                item.IsChecked = Math.Abs(_rulerInfo.RulerScale - targetScale) < 0.001;
+            }
+        }
+        private void CacheToolTipsRecursively(IEnumerable<MenuItemModel> items)
+        {
+            if (items == null) return;
+
+            foreach (var item in items)
+            {
+                // If the item has a tooltip set via object initializer, cache it
+                if (!string.IsNullOrEmpty(item.ToolTip))
+                {
+                    _originalToolTips[item] = item.ToolTip.ToString();
+                }
+
+                // Recursively check subitems (like Opacity or Save Types ranges)
+                if (item.Items != null && item.Items.Count > 0)
+                {
+                    CacheToolTipsRecursively(item.Items);
+                }
+            }
+        }
+
+        private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            ToggleOrientationCommand.Execute(null);
+        }
+
+        protected override void OnMouseUp(MouseButtonEventArgs e)
+        {
+            base.OnMouseUp(e);
+            if (e.ChangedButton == MouseButton.Left && _rulerInfo?.Guideline?.IsEnabled == true)
+            {
+                var mouseUpScreenPosition = this.PointToScreen(new Point(0,0));
+
+                double deltaX = Math.Abs(mouseUpScreenPosition.X - _mouseScreenPosition.X);
+                double deltaY = Math.Abs(mouseUpScreenPosition.Y - _mouseScreenPosition.Y);
+
+                // If the movement stays within the OS drag threshold, treat it as a clean click
+                if (deltaX < SystemParameters.MinimumHorizontalDragDistance &&
+                    deltaX < SystemParameters.MinimumVerticalDragDistance)
+                {
+                    _rulerInfo.Guideline.IsLocked = !_rulerInfo.Guideline.IsLocked;
+                    InvalidateView();
+                }
+            }
         }
     }
 }
