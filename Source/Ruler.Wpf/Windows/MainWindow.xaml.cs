@@ -92,6 +92,7 @@ namespace Ruler.Wpf.Windows
         public ICommand SetMagnficationScaleCommand { get; private set; }
         public ICommand ToggleShowUpdateWindowCommand { get; private set;}
         public ICommand ToggleShowMenuTooltips { get; private set; }
+        public ICommand SetRuleScaleCommand { get; private set; }
 
         // DI Dependencies
         private readonly IRulerFactory _rulerFactory;
@@ -105,6 +106,7 @@ namespace Ruler.Wpf.Windows
             _rulerRegistry = rulerRegistry;
 
             InitializeComponent();
+            RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
             DataContext = this;
             _isUpdatingFromWindow = true;
             // Set size based on info
@@ -181,12 +183,9 @@ namespace Ruler.Wpf.Windows
             });
             ToggleToolTipCommand = new DelegateCommand(_ =>
             {
+                _rulerInfo.ShowToolTip = !_rulerInfo.ShowToolTip;
                 UpdateToolTip();
-                var menuItem = MenuItems.FirstOrDefault(i => i.Header == "Show ToolTip");
-                if (menuItem != null)
-                {
-                    menuItem.IsChecked = _rulerInfo.IsVertical;
-                }
+                InvalidateView();
             });
             ToggleSetSizeCommand = new DelegateCommand(_ =>
             {
@@ -422,6 +421,29 @@ namespace Ruler.Wpf.Windows
                     }
                 }
             });
+            SetRuleScaleCommand = new DelegateCommand<object>(param =>
+            {
+                double scale = 0;
+
+                // Handles whether the command parameter passes the MenuItemModel or the direct double value
+                if (param is MenuItemModel model && model.Value is double dVal)
+                {
+                    scale = dVal;
+                }
+                else if (param is double directVal)
+                {
+                    scale = directVal;
+                }
+
+                if (scale > 0)
+                {
+                    _rulerInfo.RulerScale = scale;
+
+                    // Optional: Update check states for magnification menu items if you have a state-updater method
+                    //     UpdateMagnificationMenuStates();
+                }
+                InvalidateView();
+            });
         }
 
         public void PopulateMenu()
@@ -510,6 +532,25 @@ namespace Ruler.Wpf.Windows
                 IsCheckable = false,
                 IsChecked = false,
                 Items = magnificationMenu
+            });
+            int[] chromeScalePercentages = new[]
+ {
+    25, 33, 50, 67, 75, 80, 90, 100,
+    110, 125, 150, 175, 200, 250, 300, 400, 500
+};
+
+            var scaleSubmenu = MenuHelper.CreateDiscreteMenuItems(
+                values: chromeScalePercentages,
+                formatString: "{0}%",
+                valueSelector: v => v / 100.0,  // Converts integer percentage (e.g., 125) to double scale (1.25)
+                command: SetRuleScaleCommand      // Your ICommand bound to handle scale changes
+            );
+            MenuItems.Add(new MenuItemModel()
+            {
+                Header = "Ruler Scale",
+                IsCheckable = false,
+                IsChecked = false,
+                Items = scaleSubmenu
             });
             MenuItems.Add(new MenuItemModel()
             {
@@ -685,17 +726,24 @@ namespace Ruler.Wpf.Windows
 
         private void UpdateToolTip()
         {
-            _rulerInfo.ShowToolTip = !_rulerInfo.ShowToolTip;
+           
             string toolTipString;
             if (_rulerInfo.ShowToolTip)
             {
+                double userScale = _rulerInfo?.RulerScale ?? 1.0;
+
+                // Calculate logical length based on scale
+                int logicalWidth = (int)(ActualWidth / userScale);
+                int logicalHeight = (int)(ActualHeight / userScale);
+
                 toolTipString = _rulerInfo.IsVertical
-    ? $"{(int)this.Height} pixels"
-    : $"{(int)this.Width} pixels";
+                    ? $"{logicalHeight} units"
+                    : $"{logicalWidth} units";
+
                 if (_rulerInfo.Guideline.IsEnabled && _rulerInfo.Guideline.IsLocked)
                 {
-
-                    toolTipString += $"{Environment.NewLine}Guideline: {(int)_rulerInfo.Guideline.Position}";
+                    int logicalGuideline = (int)(_rulerInfo.Guideline.Position / userScale);
+                    toolTipString += $"{Environment.NewLine}Guideline: {logicalGuideline}";
                 }
                 this.ToolTip = toolTipString;
             }
@@ -736,7 +784,6 @@ namespace Ruler.Wpf.Windows
             }
             return IntPtr.Zero;
         }
-
         // Equivalent to OnPaint
         protected override void OnRender(DrawingContext drawingContext)
         {
@@ -749,11 +796,13 @@ namespace Ruler.Wpf.Windows
             var fontTypeface = new Typeface("Segoe UI");
             double dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 
+            // Draw background rectangle across the full window size
             var rulerRect = new Rect(0, 0, ActualWidth, ActualHeight);
             drawingContext.DrawRectangle(Brushes.LightSlateGray, tickPen, rulerRect);
 
             bool isVertical = _rulerInfo?.IsVertical ?? false;
 
+            // Draw ticks and numbers filling the full size, scaled by RulerScale
             if (isVertical)
             {
                 DrawVerticalRuler(drawingContext, tickPen, textBrush, fontTypeface, dpi);
@@ -762,7 +811,8 @@ namespace Ruler.Wpf.Windows
             {
                 DrawHorizontalRuler(drawingContext, tickPen, textBrush, fontTypeface, dpi);
             }
-            // --- ADD THIS BLOCK TO DRAW THE GUIDELINE ---
+
+            // Draw Guideline at its exact pixel position across the full window
             if (_rulerInfo?.Guideline?.IsEnabled == true)
             {
                 Brush guideBrush = Brushes.Red; // Default fallback
@@ -775,7 +825,6 @@ namespace Ruler.Wpf.Windows
                     }
                     catch
                     {
-                        // Fallback to Red if the hex string is malformed
                         guideBrush = Brushes.Red;
                     }
                 }
@@ -784,54 +833,41 @@ namespace Ruler.Wpf.Windows
 
                 if (isVertical)
                 {
-                    // If the ruler is vertical, the guideline is a horizontal line across the width at Y = Position
                     double y = _rulerInfo.Guideline.Position;
                     drawingContext.DrawLine(guidePen, new Point(0, y), new Point(ActualWidth, y));
                 }
                 else
                 {
-                    // If the ruler is horizontal, the guideline is a vertical line down the height at X = Position
                     double x = _rulerInfo.Guideline.Position;
                     drawingContext.DrawLine(guidePen, new Point(x, 0), new Point(x, ActualHeight));
                 }
             }
-
+        DrawAlwaysOnDisplay(drawingContext,dpi,_rulerInfo.IsVertical);
 
         }
 
         private void DrawHorizontalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
         {
             bool dualSided = ActualHeight > 100;
+            double userScale = _rulerInfo?.RulerScale ?? 1.0;
 
-            for (double x = 0; x <= ActualWidth; x += 10)
+            if (userScale >= 1.0)
             {
-                bool isMajor = (x % 50 == 0);
-                bool isMedium = (x % 25 == 0);
-                double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
-
-                dc.DrawLine(pen, new Point(x, 0), new Point(x, tickLength));
-                dc.DrawLine(pen, new Point(x, ActualHeight), new Point(x, ActualHeight - tickLength));
-
-                if (isMajor && x > 0)
+                // Zoomed in or normal: Loop by logical units and round to physical pixels
+                double maxLogical = ActualWidth / userScale;
+                for (double l = 0; l <= maxLogical; l += 1.0)
                 {
-                    var formattedText = new FormattedText(
-                        x.ToString(),
-                        System.Globalization.CultureInfo.CurrentCulture,
-                        FlowDirection.LeftToRight,
-                        typeface,
-                        10,
-                        brush,
-                        dpi);
-
-                    if (dualSided)
-                    {
-                        dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), 15));
-                        dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), ActualHeight - 25));
-                    }
-                    else
-                    {
-                        dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), (ActualHeight / 2) - (formattedText.Height / 2)));
-                    }
+                    double x = Math.Round(l * userScale);
+                    DrawHorizontalTickAtLogicalValue(dc, pen, brush, typeface, dpi, l, x, dualSided);
+                }
+            }
+            else
+            {
+                // Zoomed out (< 1.0): Iterate physical pixels to prevent compressed ticks from skipping tiers
+                for (double x = 0; x <= ActualWidth; x += 1.0)
+                {
+                    double logicalValue = x / userScale;
+                    DrawHorizontalTickAtLogicalValue(dc, pen, brush, typeface, dpi, logicalValue, x, dualSided);
                 }
             }
         }
@@ -839,40 +875,329 @@ namespace Ruler.Wpf.Windows
         private void DrawVerticalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
         {
             bool dualSided = ActualWidth > 100;
+            double userScale = _rulerInfo?.RulerScale ?? 1.0;
 
-            for (double y = 0; y <= ActualHeight; y += 10)
+            if (userScale >= 1.0)
             {
-                bool isMajor = (y % 50 == 0);
-                bool isMedium = (y % 25 == 0);
-                double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
-
-                dc.DrawLine(pen, new Point(0, y), new Point(tickLength, y));
-                dc.DrawLine(pen, new Point(ActualWidth, y), new Point(ActualWidth - tickLength, y));
-
-                if (isMajor && y > 0)
+                double maxLogical = ActualHeight / userScale;
+                for (double l = 0; l <= maxLogical; l += 1.0)
                 {
-                    var formattedText = new FormattedText(
-                        y.ToString(),
-                        System.Globalization.CultureInfo.CurrentCulture,
-                        FlowDirection.LeftToRight,
-                        typeface,
-                        10,
-                        brush,
-                        dpi);
-
-                    if (dualSided)
-                    {
-                        dc.DrawText(formattedText, new Point(22, y - (formattedText.Height / 2)));
-                        dc.DrawText(formattedText, new Point(ActualWidth - 28, y - (formattedText.Height / 2)));
-                    }
-                    else
-                    {
-                        dc.DrawText(formattedText, new Point((ActualWidth / 2) - (formattedText.Width / 2), y - (formattedText.Height / 2)));
-                    }
+                    double y = Math.Round(l * userScale);
+                    DrawVerticalTickAtLogicalValue(dc, pen, brush, typeface, dpi, l, y, dualSided);
+                }
+            }
+            else
+            {
+                for (double y = 0; y <= ActualHeight; y += 1.0)
+                {
+                    double logicalValue = y / userScale;
+                    DrawVerticalTickAtLogicalValue(dc, pen, brush, typeface, dpi, logicalValue, y, dualSided);
                 }
             }
         }
-        // Mouse Events
+
+        private void DrawHorizontalTickAtLogicalValue(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi, double logicalValue, double x, bool dualSided)
+        {
+            long roundedLogical = (long)Math.Round(logicalValue);
+
+            bool is100 = (roundedLogical % 100 == 0);
+            bool is50 = (roundedLogical % 50 == 0);
+            bool is10 = (roundedLogical % 10 == 0);
+            bool is5 = (roundedLogical % 5 == 0);
+            bool is2 = (roundedLogical % 2 == 0);
+
+            double tickLength = 0;
+            bool shouldDraw = true;
+
+            if (is100) tickLength = 14;
+            else if (is50) tickLength = 11;
+            else if (is10) tickLength = 8;
+            else if (is5) tickLength = 6;
+            else if (is2) tickLength = 4;
+            else
+            {
+                shouldDraw = false;
+            }
+
+            if (!shouldDraw) return;
+
+            // Draw crisp 1-pixel wide filled rectangles
+            dc.DrawRectangle(brush, null, new Rect(x, 0, 1.0, tickLength));
+            dc.DrawRectangle(brush, null, new Rect(x, ActualHeight - tickLength, 1.0, tickLength));
+
+            if (is100 && logicalValue >= 0)
+            {
+                var formattedText = new FormattedText(
+                    roundedLogical.ToString(),
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    typeface,
+                    10,
+                    brush,
+                    dpi);
+
+                if (dualSided)
+                {
+                    dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), 16));
+                    dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), ActualHeight - 26));
+                }
+                else
+                {
+                    dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), (ActualHeight / 2) - (formattedText.Height / 2)));
+                }
+            }
+        }
+
+        private void DrawVerticalTickAtLogicalValue(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi, double logicalValue, double y, bool dualSided)
+        {
+            long roundedLogical = (long)Math.Round(logicalValue);
+
+            bool is100 = (roundedLogical % 100 == 0);
+            bool is50 = (roundedLogical % 50 == 0);
+            bool is10 = (roundedLogical % 10 == 0);
+            bool is5 = (roundedLogical % 5 == 0);
+            bool is2 = (roundedLogical % 2 == 0);
+
+            double tickLength = 0;
+            bool shouldDraw = true;
+
+            if (is100) tickLength = 14;
+            else if (is50) tickLength = 11;
+            else if (is10) tickLength = 8;
+            else if (is5) tickLength = 6;
+            else if (is2) tickLength = 4;
+            else
+            {
+                shouldDraw = false;
+            }
+
+            if (!shouldDraw) return;
+
+            // Draw crisp 1-pixel high filled rectangles for vertical ticks
+            dc.DrawRectangle(brush, null, new Rect(0, y, tickLength, 1.0));
+            dc.DrawRectangle(brush, null, new Rect(ActualWidth - tickLength, y, tickLength, 1.0));
+
+            if (is100 && logicalValue >= 0)
+            {
+                var formattedText = new FormattedText(
+                    roundedLogical.ToString(),
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    typeface,
+                    10,
+                    brush,
+                    dpi);
+
+                if (dualSided)
+                {
+                    dc.DrawText(formattedText, new Point(22, y - (formattedText.Height / 2)));
+                    dc.DrawText(formattedText, new Point(ActualWidth - 28, y - (formattedText.Height / 2)));
+                }
+                else
+                {
+                    dc.DrawText(formattedText, new Point((ActualWidth / 2) - (formattedText.Width / 2), y - (formattedText.Height / 2)));
+                }
+            }
+        }
+        private void DrawAlwaysOnDisplay(DrawingContext dc, double dpi, bool isVertical)
+        {
+            double userScale = _rulerInfo?.RulerScale ?? 1.0;
+            if (userScale < 0.75) return;
+            int logicalWidth = (int)(ActualWidth / userScale);
+            int logicalHeight = (int)(ActualHeight / userScale);
+
+            // Build the readout text string
+            string labelText = isVertical
+                ? $"{logicalHeight} pixels"
+                : $"{logicalWidth} pixels";
+
+            if (_rulerInfo?.Guideline?.IsEnabled == true)
+            {
+                int logicalGuideline = (int)(_rulerInfo.Guideline.Position / userScale);
+                labelText += $"{Environment.NewLine}Guideline: {logicalGuideline}";
+            }
+
+            var textBrush = Brushes.Black;
+            var fontTypeface = new Typeface("Segoe UI");
+
+            var formattedText = new FormattedText(
+                labelText,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                fontTypeface,
+                11, // Font size
+                textBrush,
+                dpi);
+
+            Point textPosition;
+
+            if (isVertical)
+            {
+                // Vertical Ruler: 5 pixels down from the top edge, centered horizontally
+                double x = (ActualWidth / 2) - (formattedText.Width / 2);
+                double y = 5;
+                textPosition = new Point(x, y);
+            }
+            else
+            {
+                // Horizontal Ruler: 5 pixels in from the left edge, centered vertically
+                double x = 5;
+                double y = (ActualHeight / 2) - (formattedText.Height / 2);
+                textPosition = new Point(x, y);
+            }
+
+         
+            // Draw the actual text on top
+            dc.DrawText(formattedText, textPosition);
+        }
+        //// Equivalent to OnPaint
+        //protected override void OnRender(DrawingContext drawingContext)
+        //{
+        //    base.OnRender(drawingContext);
+
+        //    if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
+        //    var tickPen = new Pen(Brushes.Black, 1);
+        //    var textBrush = Brushes.Black;
+        //    var fontTypeface = new Typeface("Segoe UI");
+
+        //    // 1. Get system DPI and combine with the user's ruler scale factor
+        //    var dpi = VisualTreeHelper.GetDpi(this);
+        //    double userScale = _rulerInfo?.RulerScale ?? 1.0;
+        //    double scaleX = userScale * dpi.DpiScaleX;
+        //    double scaleY = userScale * dpi.DpiScaleY;
+
+        //    // Draw background rectangle at full size (unscaled background fill)
+        //    var rulerRect = new Rect(0, 0, ActualWidth, ActualHeight);
+        //    drawingContext.DrawRectangle(Brushes.LightSlateGray, tickPen, rulerRect);
+
+        //    // 2. Push the combined scale transform
+        //    drawingContext.PushTransform(new ScaleTransform(scaleX, scaleY));
+        //    try
+        //    {
+        //        bool isVertical = _rulerInfo?.IsVertical ?? false;
+
+        //        if (isVertical)
+        //        {
+        //            DrawVerticalRuler(drawingContext, tickPen, textBrush, fontTypeface, dpi.PixelsPerDip);
+        //        }
+        //        else
+        //        {
+        //            DrawHorizontalRuler(drawingContext, tickPen, textBrush, fontTypeface, dpi.PixelsPerDip);
+        //        }
+
+        //        // Guideline rendering
+        //        if (_rulerInfo?.Guideline?.IsEnabled == true)
+        //        {
+        //            Brush guideBrush = Brushes.Red; // Default fallback
+
+        //            if (!string.IsNullOrEmpty(_rulerInfo.Guideline.GuidelineColorHex))
+        //            {
+        //                try
+        //                {
+        //                    guideBrush = (Brush)new BrushConverter().ConvertFromString(_rulerInfo.Guideline.GuidelineColorHex);
+        //                }
+        //                catch
+        //                {
+        //                    guideBrush = Brushes.Red;
+        //                }
+        //            }
+
+        //            var guidePen = new Pen(guideBrush, 1);
+
+        //            if (isVertical)
+        //            {
+        //                double y = _rulerInfo.Guideline.Position;
+        //                drawingContext.DrawLine(guidePen, new Point(0, y), new Point(ActualWidth, y));
+        //            }
+        //            else
+        //            {
+        //                double x = _rulerInfo.Guideline.Position;
+        //                drawingContext.DrawLine(guidePen, new Point(x, 0), new Point(x, ActualHeight));
+        //            }
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        // 3. Always pop the transform to maintain the rendering stack state
+        //        drawingContext.Pop();
+        //    }
+        //}
+
+        //private void DrawHorizontalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
+        //{
+        //    bool dualSided = ActualHeight > 100;
+
+        //    for (double x = 0; x <= ActualWidth; x += 10)
+        //    {
+        //        bool isMajor = (x % 50 == 0);
+        //        bool isMedium = (x % 25 == 0);
+        //        double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
+
+        //        dc.DrawLine(pen, new Point(x, 0), new Point(x, tickLength));
+        //        dc.DrawLine(pen, new Point(x, ActualHeight), new Point(x, ActualHeight - tickLength));
+
+        //        if (isMajor && x > 0)
+        //        {
+        //            var formattedText = new FormattedText(
+        //                x.ToString(),
+        //                System.Globalization.CultureInfo.CurrentCulture,
+        //                FlowDirection.LeftToRight,
+        //                typeface,
+        //                10,
+        //                brush,
+        //                dpi);
+
+        //            if (dualSided)
+        //            {
+        //                dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), 15));
+        //                dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), ActualHeight - 25));
+        //            }
+        //            else
+        //            {
+        //                dc.DrawText(formattedText, new Point(x - (formattedText.Width / 2), (ActualHeight / 2) - (formattedText.Height / 2)));
+        //            }
+        //        }
+        //    }
+        //}
+
+        //private void DrawVerticalRuler(DrawingContext dc, Pen pen, Brush brush, Typeface typeface, double dpi)
+        //{
+        //    bool dualSided = ActualWidth > 100;
+
+        //    for (double y = 0; y <= ActualHeight; y += 10)
+        //    {
+        //        bool isMajor = (y % 50 == 0);
+        //        bool isMedium = (y % 25 == 0);
+        //        double tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
+
+        //        dc.DrawLine(pen, new Point(0, y), new Point(tickLength, y));
+        //        dc.DrawLine(pen, new Point(ActualWidth, y), new Point(ActualWidth - tickLength, y));
+
+        //        if (isMajor && y > 0)
+        //        {
+        //            var formattedText = new FormattedText(
+        //                y.ToString(),
+        //                System.Globalization.CultureInfo.CurrentCulture,
+        //                FlowDirection.LeftToRight,
+        //                typeface,
+        //                10,
+        //                brush,
+        //                dpi);
+
+        //            if (dualSided)
+        //            {
+        //                dc.DrawText(formattedText, new Point(22, y - (formattedText.Height / 2)));
+        //                dc.DrawText(formattedText, new Point(ActualWidth - 28, y - (formattedText.Height / 2)));
+        //            }
+        //            else
+        //            {
+        //                dc.DrawText(formattedText, new Point((ActualWidth / 2) - (formattedText.Width / 2), y - (formattedText.Height / 2)));
+        //            }
+        //        }
+        //    }
+        //}
+        //// Mouse Events
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             base.OnMouseDown(e);
@@ -1241,6 +1566,10 @@ namespace Ruler.Wpf.Windows
                         item.IsChecked = _rulerInfo.SaveType.HasFlag(saveTypeVal);
                     }
                 }
+            }
+            if (parentHeader == "Scale" && item.Value is double targetScale)
+            {
+                item.IsChecked = Math.Abs(_rulerInfo.RulerScale - targetScale) < 0.001;
             }
         }
         private void CacheToolTipsRecursively(IEnumerable<MenuItemModel> items)

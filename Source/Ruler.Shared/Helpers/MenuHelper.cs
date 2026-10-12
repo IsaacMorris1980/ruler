@@ -59,6 +59,27 @@ namespace Ruler.Shared.Helpers
 
             return items;
         }
-    
+        public static ObservableCollection<MenuItemModel> CreateDiscreteMenuItems<T>(
+    IEnumerable<T> values,
+    string formatString,
+    Func<T, object> valueSelector,
+    ICommand command)
+        {
+            var items = new ObservableCollection<MenuItemModel>();
+
+            foreach (var val in values)
+            {
+                items.Add(new MenuItemModel()
+                {
+                    Header = string.Format(formatString, val),
+                    Value = valueSelector(val),
+                    Command = command,
+                    IsCheckable = true
+                });
+            }
+
+            return items;
+        }
+
     }
 }

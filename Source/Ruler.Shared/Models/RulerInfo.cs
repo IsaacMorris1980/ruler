@@ -46,7 +46,14 @@ namespace Ruler.Shared.Models
             get;
             set;
         }
-        
+        private double _rulerScale=1.0;
+        [JsonProperty("RulerScale")]
+        public double RulerScale
+        {
+            get => _rulerScale;
+            set => SetProperty(ref _rulerScale, value);
+        }
+
         [JsonProperty("Opacity")]
         public double Opacity
         {
